@@ -9,8 +9,8 @@ const userSchema = new mongoose.Schema(
     },
     enrollmentNo: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
       trim: true
     },
     email: {
