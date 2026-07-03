@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const modelRoutes = require('./routes/modelRoutes');
 
 dotenv.config();
 
@@ -12,6 +13,7 @@ connectDB();
 
 app.use(cors());
 app.use(express.json());
+app.use('/api', modelRoutes);
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({
