@@ -5,53 +5,78 @@ const getChatbotReply = (question) => {
 
   // Real Gemini API integration can be added later using GEMINI_API_KEY.
   if (
+    lowerQuestion.includes('track') ||
+    lowerQuestion.includes('tracking') ||
+    lowerQuestion.includes('status') ||
+    lowerQuestion.includes('progress') ||
+    lowerQuestion.includes('update') ||
+    lowerQuestion.includes('complaint status') ||
+    lowerQuestion.includes('my complaint')
+  ) {
+    return {
+      intent: 'complaint_tracking',
+      answer:
+        'You can track your complaint status from the My Complaints page in your Student Dashboard. There you can see whether your complaint is Pending, In Progress, Resolved, or Rejected.'
+    };
+  }
+
+  if (
     lowerQuestion.includes('complaint') ||
     lowerQuestion.includes('issue') ||
-    lowerQuestion.includes('problem')
+    lowerQuestion.includes('problem') ||
+    lowerQuestion.includes('raise complaint') ||
+    lowerQuestion.includes('submit complaint') ||
+    lowerQuestion.includes('report issue')
   ) {
     return {
       intent: 'complaint_help',
       answer:
-        'You can submit a complaint from the Student Dashboard by opening the Complaint section and filling in the complaint details.'
+        'You can submit a complaint from the Student Dashboard by opening the Submit Complaint section and filling in the complaint details.'
     };
   }
 
-  if (lowerQuestion.includes('status') || lowerQuestion.includes('track')) {
-    return {
-      intent: 'complaint_tracking',
-      answer:
-        'You can check your complaint status from the My Complaints page. It shows whether your complaint is Pending, In Progress, Resolved, or Rejected.'
-    };
-  }
-
-  if (lowerQuestion.includes('notice') || lowerQuestion.includes('announcement')) {
+  if (
+    lowerQuestion.includes('notice') ||
+    lowerQuestion.includes('notices') ||
+    lowerQuestion.includes('announcement') ||
+    lowerQuestion.includes('announcements')
+  ) {
     return {
       intent: 'notice_help',
-      answer:
-        'You can view college notices and announcements from the Notices page. Important and urgent notices will be shown there.'
+      answer: 'You can view college notices and announcements from the Notices section in your dashboard.'
     };
   }
 
-  if (lowerQuestion.includes('event')) {
+  if (
+    lowerQuestion.includes('event') ||
+    lowerQuestion.includes('events') ||
+    lowerQuestion.includes('workshop') ||
+    lowerQuestion.includes('seminar')
+  ) {
     return {
       intent: 'event_help',
-      answer:
-        'You can check upcoming campus events from the Events page, including event date, time, venue, and organizer details.'
+      answer: 'You can check upcoming college events from the Events section in your dashboard.'
     };
   }
 
-  if (lowerQuestion.includes('lost') || lowerQuestion.includes('found')) {
+  if (
+    lowerQuestion.includes('lost') ||
+    lowerQuestion.includes('found') ||
+    lowerQuestion.includes('item') ||
+    lowerQuestion.includes('lost item') ||
+    lowerQuestion.includes('found item')
+  ) {
     return {
       intent: 'lost_found_help',
       answer:
-        'You can use the Lost and Found page to report a lost item, post a found item, or check active lost/found listings.'
+        'You can report or search lost and found items from the Lost and Found section in your dashboard.'
     };
   }
 
   return {
     intent: 'general_help',
     answer:
-      'I can help you with complaints, complaint tracking, notices, events, and lost and found support on CampusConnect 360.'
+      'CampusConnect 360 can help you with complaints, complaint tracking, notices, events, lost and found items, and student support.'
   };
 };
 
