@@ -48,7 +48,9 @@ function LoginPage() {
         <aside className="campus-auth-hero">
           <h1>Welcome to CampusConnect 360</h1>
           <p>Smart campus services, complaints, notices, events and student support in one place.</p>
-          <img className="campus-login-illustration" src={loginIllustration} alt="Student working on laptop" />
+          <div className="campus-illustration-frame">
+            <img className="campus-login-illustration" src={loginIllustration} alt="Student working on laptop" />
+          </div>
         </aside>
 
         <form className="campus-auth-card" onSubmit={handleSubmit}>
