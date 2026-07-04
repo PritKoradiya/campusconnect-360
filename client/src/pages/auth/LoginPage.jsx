@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, BookOpen, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import '../../styles/auth.css';
 
@@ -7,20 +7,22 @@ const roles = ['student', 'admin', 'department'];
 
 function CampusIllustration() {
   return (
-    <svg className="campus-auth-illustration" viewBox="0 0 520 360" role="img" aria-label="Student working on laptop">
-      <rect x="72" y="256" width="376" height="38" rx="19" className="illustration-floor" />
-      <rect x="298" y="62" width="118" height="150" rx="18" className="illustration-window" />
-      <path d="M316 86h82M316 118h82M316 150h82" className="illustration-window-line" />
-      <circle cx="194" cy="104" r="38" className="illustration-head" />
-      <path d="M150 104c8-38 38-62 76-44 24 12 30 34 28 50-30-18-63-20-104-6Z" className="illustration-hair" />
-      <path d="M136 170c12-34 42-54 76-54s64 20 76 54l18 74H118l18-74Z" className="illustration-shirt" />
-      <path d="M166 168c18 18 45 18 64 0" className="illustration-smile" />
-      <rect x="222" y="184" width="150" height="92" rx="14" className="illustration-laptop" />
-      <path d="M244 276h166l28 34H216l28-34Z" className="illustration-keyboard" />
-      <circle cx="296" cy="230" r="10" className="illustration-logo" />
-      <path d="M126 222c-32-14-48-38-44-72M374 224c30-10 48-34 52-70" className="illustration-arm" />
-      <circle cx="92" cy="132" r="18" className="illustration-chip" />
-      <circle cx="430" cy="132" r="18" className="illustration-chip" />
+    <svg className="campus-auth-illustration" viewBox="0 0 520 360" role="img" aria-label="Student working at computer desk">
+      <rect x="72" y="282" width="376" height="20" rx="10" className="illustration-floor" />
+      <rect x="120" y="194" width="288" height="18" rx="9" className="illustration-desk" />
+      <path d="M154 212v74M374 212v74" className="illustration-desk-leg" />
+      <rect x="274" y="86" width="126" height="88" rx="12" className="illustration-monitor" />
+      <path d="M324 174h28v20h-28zM300 194h76" className="illustration-monitor-stand" />
+      <path d="M296 112h82M296 136h52" className="illustration-screen-line" />
+      <circle cx="186" cy="104" r="30" className="illustration-head" />
+      <path d="M156 100c8-34 34-44 60-30 14 8 20 22 18 36-26-14-50-14-78-6Z" className="illustration-hair" />
+      <path d="M146 164c10-30 30-46 54-46s46 16 56 46l12 54H134l12-54Z" className="illustration-shirt" />
+      <path d="M214 170c22 8 42 18 58 34M168 170c-18 14-32 28-44 44" className="illustration-arm" />
+      <rect x="178" y="212" width="80" height="66" rx="12" className="illustration-chair" />
+      <path d="M190 278v28M246 278v28" className="illustration-desk-leg" />
+      <rect x="220" y="178" width="72" height="22" rx="8" className="illustration-keyboard" />
+      <circle cx="422" cy="178" r="10" className="illustration-plant-dot" />
+      <path d="M422 188v24M404 212h36" className="illustration-plant" />
     </svg>
   );
 }
@@ -62,20 +64,9 @@ function LoginPage() {
 
       <section className="campus-auth-shell">
         <aside className="campus-auth-hero">
-          <div className="campus-auth-kicker">
-            <BookOpen size={16} />
-            University ERP Portal
-          </div>
           <h1>Welcome to CampusConnect 360</h1>
-          <p>Your smart campus utility and student support platform.</p>
+          <p>Smart campus services, complaints, notices, events and student support in one place.</p>
           <CampusIllustration />
-          <div className="campus-auth-chips">
-            <span>Complaints</span>
-            <span>Notices</span>
-            <span>Events</span>
-            <span>Lost & Found</span>
-            <span>AI Helpdesk</span>
-          </div>
         </aside>
 
         <form className="campus-auth-card" onSubmit={handleSubmit}>
@@ -84,8 +75,8 @@ function LoginPage() {
               <ShieldCheck size={24} />
             </div>
             <div>
-              <h2>Login to your campus portal</h2>
-              <p>Access student services, complaints, notices and support in one place.</p>
+              <h2>Login</h2>
+              <p>Access your campus portal</p>
             </div>
           </div>
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, BookOpen, Eye, EyeOff, Hash, Lock, Mail, Phone, UserRound } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Hash, Lock, Mail, Phone, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import '../../styles/auth.css';
 
@@ -7,19 +7,21 @@ const roles = ['student', 'admin', 'department'];
 
 function CampusIllustration() {
   return (
-    <svg className="campus-auth-illustration" viewBox="0 0 520 360" role="img" aria-label="Campus registration illustration">
-      <rect x="78" y="262" width="364" height="34" rx="17" className="illustration-floor" />
-      <path d="M116 242h288v34H116z" className="illustration-keyboard" />
-      <rect x="168" y="114" width="184" height="126" rx="18" className="illustration-laptop" />
-      <circle cx="260" cy="176" r="12" className="illustration-logo" />
-      <circle cx="136" cy="96" r="32" className="illustration-head" />
-      <path d="M104 96c8-34 36-50 66-34 18 10 24 28 22 42-28-16-54-16-88-8Z" className="illustration-hair" />
-      <path d="M88 164c10-28 32-46 58-46s48 18 58 46l14 58H74l14-58Z" className="illustration-shirt" />
-      <circle cx="384" cy="96" r="32" className="illustration-head" />
-      <path d="M352 96c8-34 36-50 66-34 18 10 24 28 22 42-28-16-54-16-88-8Z" className="illustration-hair" />
-      <path d="M336 164c10-28 32-46 58-46s48 18 58 46l14 58H322l14-58Z" className="illustration-shirt" />
-      <path d="M212 74h96M228 54h64" className="illustration-window-line" />
-      <circle cx="260" cy="44" r="12" className="illustration-chip" />
+    <svg className="campus-auth-illustration" viewBox="0 0 520 360" role="img" aria-label="Student account setup illustration">
+      <rect x="80" y="282" width="360" height="20" rx="10" className="illustration-floor" />
+      <rect x="126" y="196" width="270" height="18" rx="9" className="illustration-desk" />
+      <path d="M158 214v72M368 214v72" className="illustration-desk-leg" />
+      <rect x="268" y="92" width="118" height="82" rx="12" className="illustration-monitor" />
+      <path d="M316 174h24v22h-24zM294 196h68" className="illustration-monitor-stand" />
+      <path d="M290 118h74M290 140h48" className="illustration-screen-line" />
+      <circle cx="184" cy="112" r="28" className="illustration-head" />
+      <path d="M156 108c7-31 32-42 56-28 14 8 18 20 17 34-24-13-47-13-73-6Z" className="illustration-hair" />
+      <path d="M146 168c9-28 29-44 52-44s43 16 52 44l12 50H134l12-50Z" className="illustration-shirt" />
+      <path d="M212 174c20 8 38 18 54 32M168 174c-18 14-32 28-42 42" className="illustration-arm" />
+      <rect x="178" y="214" width="78" height="64" rx="12" className="illustration-chair" />
+      <rect x="218" y="180" width="68" height="20" rx="8" className="illustration-keyboard" />
+      <path d="M414 178v34M398 212h32" className="illustration-plant" />
+      <circle cx="414" cy="170" r="10" className="illustration-plant-dot" />
     </svg>
   );
 }
@@ -68,19 +70,9 @@ function RegisterPage() {
 
       <section className="campus-auth-shell campus-register-shell">
         <aside className="campus-auth-hero">
-          <div className="campus-auth-kicker">
-            <BookOpen size={16} />
-            Campus Account Setup
-          </div>
-          <h1>Join CampusConnect 360</h1>
-          <p>Create your profile for campus services, communication and support workflows.</p>
+          <h1>Create your CampusConnect profile</h1>
+          <p>Register once to prepare access for student services, notices and support tools.</p>
           <CampusIllustration />
-          <div className="campus-auth-chips">
-            <span>Secure Portal</span>
-            <span>Student Services</span>
-            <span>Department Tools</span>
-            <span>Support Desk</span>
-          </div>
         </aside>
 
         <form className="campus-auth-card campus-register-card" onSubmit={handleSubmit}>
