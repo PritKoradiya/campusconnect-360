@@ -1,31 +1,11 @@
 import { useState } from 'react';
 import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import loginIllustration from '../../assets/login-illustration.png';
+import logo from '../../assets/logo.png';
 import '../../styles/auth.css';
 
 const roles = ['student', 'admin', 'department'];
-
-function CampusIllustration() {
-  return (
-    <svg className="campus-auth-illustration" viewBox="0 0 520 360" role="img" aria-label="Student working at computer desk">
-      <rect x="72" y="282" width="376" height="20" rx="10" className="illustration-floor" />
-      <rect x="120" y="194" width="288" height="18" rx="9" className="illustration-desk" />
-      <path d="M154 212v74M374 212v74" className="illustration-desk-leg" />
-      <rect x="274" y="86" width="126" height="88" rx="12" className="illustration-monitor" />
-      <path d="M324 174h28v20h-28zM300 194h76" className="illustration-monitor-stand" />
-      <path d="M296 112h82M296 136h52" className="illustration-screen-line" />
-      <circle cx="186" cy="104" r="30" className="illustration-head" />
-      <path d="M156 100c8-34 34-44 60-30 14 8 20 22 18 36-26-14-50-14-78-6Z" className="illustration-hair" />
-      <path d="M146 164c10-30 30-46 54-46s46 16 56 46l12 54H134l12-54Z" className="illustration-shirt" />
-      <path d="M214 170c22 8 42 18 58 34M168 170c-18 14-32 28-44 44" className="illustration-arm" />
-      <rect x="178" y="212" width="80" height="66" rx="12" className="illustration-chair" />
-      <path d="M190 278v28M246 278v28" className="illustration-desk-leg" />
-      <rect x="220" y="178" width="72" height="22" rx="8" className="illustration-keyboard" />
-      <circle cx="422" cy="178" r="10" className="illustration-plant-dot" />
-      <path d="M422 188v24M404 212h36" className="illustration-plant" />
-    </svg>
-  );
-}
 
 function LoginPage() {
   const [formData, setFormData] = useState({
@@ -54,7 +34,9 @@ function LoginPage() {
     <main className="campus-auth-page">
       <header className="campus-auth-header">
         <Link className="campus-auth-brand" to="/login">
-          <span className="campus-auth-logo">C</span>
+          <span className="campus-auth-logo">
+            <img src={logo} alt="CampusConnect 360 logo" />
+          </span>
           <span>CampusConnect 360</span>
         </Link>
         <Link className="campus-auth-header-link" to="/register">
@@ -66,7 +48,7 @@ function LoginPage() {
         <aside className="campus-auth-hero">
           <h1>Welcome to CampusConnect 360</h1>
           <p>Smart campus services, complaints, notices, events and student support in one place.</p>
-          <CampusIllustration />
+          <img className="campus-login-illustration" src={loginIllustration} alt="Student working on laptop" />
         </aside>
 
         <form className="campus-auth-card" onSubmit={handleSubmit}>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowRight, Eye, EyeOff, Hash, Lock, Mail, Phone, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import logo from '../../assets/logo.png';
 import '../../styles/auth.css';
 
 const roles = ['student', 'admin', 'department'];
@@ -8,20 +9,25 @@ const roles = ['student', 'admin', 'department'];
 function CampusIllustration() {
   return (
     <svg className="campus-auth-illustration" viewBox="0 0 520 360" role="img" aria-label="Student account setup illustration">
-      <rect x="80" y="282" width="360" height="20" rx="10" className="illustration-floor" />
-      <rect x="126" y="196" width="270" height="18" rx="9" className="illustration-desk" />
-      <path d="M158 214v72M368 214v72" className="illustration-desk-leg" />
-      <rect x="268" y="92" width="118" height="82" rx="12" className="illustration-monitor" />
-      <path d="M316 174h24v22h-24zM294 196h68" className="illustration-monitor-stand" />
-      <path d="M290 118h74M290 140h48" className="illustration-screen-line" />
-      <circle cx="184" cy="112" r="28" className="illustration-head" />
-      <path d="M156 108c7-31 32-42 56-28 14 8 18 20 17 34-24-13-47-13-73-6Z" className="illustration-hair" />
-      <path d="M146 168c9-28 29-44 52-44s43 16 52 44l12 50H134l12-50Z" className="illustration-shirt" />
-      <path d="M212 174c20 8 38 18 54 32M168 174c-18 14-32 28-42 42" className="illustration-arm" />
-      <rect x="178" y="214" width="78" height="64" rx="12" className="illustration-chair" />
-      <rect x="218" y="180" width="68" height="20" rx="8" className="illustration-keyboard" />
-      <path d="M414 178v34M398 212h32" className="illustration-plant" />
-      <circle cx="414" cy="170" r="10" className="illustration-plant-dot" />
+      <rect x="50" y="302" width="420" height="18" rx="9" className="illustration-floor" />
+      <rect x="76" y="208" width="368" height="18" rx="9" className="illustration-desk" />
+      <path d="M110 226v80M414 226v80" className="illustration-desk-leg" />
+      <rect x="268" y="106" width="124" height="82" rx="12" className="illustration-monitor" />
+      <path d="M318 188h26v20h-26zM294 208h74" className="illustration-monitor-stand" />
+      <path d="M290 130h78M290 152h54" className="illustration-screen-line" />
+      <rect x="232" y="188" width="82" height="20" rx="8" className="illustration-keyboard" />
+      <circle cx="184" cy="104" r="30" className="illustration-head" />
+      <path d="M154 102c6-30 30-47 56-37 18 7 26 22 27 39-24-14-52-17-83-2Z" className="illustration-hair" />
+      <path d="M166 138c12 10 24 10 36 0" className="illustration-face" />
+      <path d="M138 168c12-28 34-43 58-43 27 0 48 18 60 48l16 56H122l16-61Z" className="illustration-shirt" />
+      <path d="M238 186c22 10 42 18 66 22M150 186c-18 10-36 18-58 20" className="illustration-arm" />
+      <rect x="144" y="228" width="104" height="60" rx="16" className="illustration-chair" />
+      <path d="M168 226c-8 22-6 48 6 72M226 226c16 24 26 48 30 76" className="illustration-leg" />
+      <path d="M400 134v68M382 134h36" className="illustration-lamp" />
+      <path d="M374 134h52l-10-30h-32l-10 30Z" className="illustration-lamp-shade" />
+      <rect x="404" y="226" width="34" height="32" rx="7" className="illustration-pot" />
+      <path d="M421 226c-14-26-2-48 18-60M421 226c16-24 38-28 50-18M421 226c-8-22-26-30-42-22" className="illustration-plant" />
+      <path d="M92 184h62M106 168h48" className="illustration-books" />
     </svg>
   );
 }
@@ -60,7 +66,9 @@ function RegisterPage() {
     <main className="campus-auth-page">
       <header className="campus-auth-header">
         <Link className="campus-auth-brand" to="/login">
-          <span className="campus-auth-logo">C</span>
+          <span className="campus-auth-logo">
+            <img src={logo} alt="CampusConnect 360 logo" />
+          </span>
           <span>CampusConnect 360</span>
         </Link>
         <Link className="campus-auth-header-link" to="/login">
