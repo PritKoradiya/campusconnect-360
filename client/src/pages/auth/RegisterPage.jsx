@@ -1,19 +1,270 @@
+import { useState } from 'react';
+import { ArrowRight, BookOpen, Eye, EyeOff, Hash, Lock, Mail, Phone, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import '../../styles/auth.css';
+
+const roles = ['student', 'admin', 'department'];
+
+function CampusIllustration() {
+  return (
+    <svg className="campus-auth-illustration" viewBox="0 0 520 360" role="img" aria-label="Campus registration illustration">
+      <rect x="78" y="262" width="364" height="34" rx="17" className="illustration-floor" />
+      <path d="M116 242h288v34H116z" className="illustration-keyboard" />
+      <rect x="168" y="114" width="184" height="126" rx="18" className="illustration-laptop" />
+      <circle cx="260" cy="176" r="12" className="illustration-logo" />
+      <circle cx="136" cy="96" r="32" className="illustration-head" />
+      <path d="M104 96c8-34 36-50 66-34 18 10 24 28 22 42-28-16-54-16-88-8Z" className="illustration-hair" />
+      <path d="M88 164c10-28 32-46 58-46s48 18 58 46l14 58H74l14-58Z" className="illustration-shirt" />
+      <circle cx="384" cy="96" r="32" className="illustration-head" />
+      <path d="M352 96c8-34 36-50 66-34 18 10 24 28 22 42-28-16-54-16-88-8Z" className="illustration-hair" />
+      <path d="M336 164c10-28 32-46 58-46s48 18 58 46l14 58H322l14-58Z" className="illustration-shirt" />
+      <path d="M212 74h96M228 54h64" className="illustration-window-line" />
+      <circle cx="260" cy="44" r="12" className="illustration-chip" />
+    </svg>
+  );
+}
 
 function RegisterPage() {
+  const [formData, setFormData] = useState({
+    fullName: '',
+    enrollmentNo: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    role: 'student',
+    branch: '',
+    semester: '',
+    department: ''
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    console.log('Register form data:', formData);
+  };
+
   return (
-    <main className="public-page">
-      <section className="public-panel">
-        <h1>Register</h1>
-        <p>Register page placeholder. User registration UI will be connected to the backend in a later step.</p>
-        <div className="public-actions">
-          <Link className="btn" to="/login">
-            Login
-          </Link>
-          <Link className="btn btn-secondary" to="/">
-            Home
-          </Link>
-        </div>
+    <main className="campus-auth-page">
+      <header className="campus-auth-header">
+        <Link className="campus-auth-brand" to="/login">
+          <span className="campus-auth-logo">C</span>
+          <span>CampusConnect 360</span>
+        </Link>
+        <Link className="campus-auth-header-link" to="/login">
+          Login
+        </Link>
+      </header>
+
+      <section className="campus-auth-shell campus-register-shell">
+        <aside className="campus-auth-hero">
+          <div className="campus-auth-kicker">
+            <BookOpen size={16} />
+            Campus Account Setup
+          </div>
+          <h1>Join CampusConnect 360</h1>
+          <p>Create your profile for campus services, communication and support workflows.</p>
+          <CampusIllustration />
+          <div className="campus-auth-chips">
+            <span>Secure Portal</span>
+            <span>Student Services</span>
+            <span>Department Tools</span>
+            <span>Support Desk</span>
+          </div>
+        </aside>
+
+        <form className="campus-auth-card campus-register-card" onSubmit={handleSubmit}>
+          <div className="campus-auth-card-heading">
+            <div className="campus-auth-card-icon">
+              <UserRound size={24} />
+            </div>
+            <div>
+              <h2>Create Account</h2>
+              <p>Fill in your details to prepare your campus portal profile.</p>
+            </div>
+          </div>
+
+          <div className="campus-form-grid">
+            <div className="campus-form-group">
+              <label htmlFor="fullName">Full Name</label>
+              <div className="campus-input-with-icon">
+                <UserRound size={18} />
+                <input
+                  id="fullName"
+                  name="fullName"
+                  onChange={handleChange}
+                  placeholder="Enter full name"
+                  type="text"
+                  value={formData.fullName}
+                />
+              </div>
+            </div>
+
+            <div className="campus-form-group">
+              <label htmlFor="enrollmentNo">Enrollment Number</label>
+              <div className="campus-input-with-icon">
+                <Hash size={18} />
+                <input
+                  id="enrollmentNo"
+                  name="enrollmentNo"
+                  onChange={handleChange}
+                  placeholder="ENR001"
+                  type="text"
+                  value={formData.enrollmentNo}
+                />
+              </div>
+            </div>
+
+            <div className="campus-form-group">
+              <label htmlFor="registerEmail">Email</label>
+              <div className="campus-input-with-icon">
+                <Mail size={18} />
+                <input
+                  id="registerEmail"
+                  name="email"
+                  onChange={handleChange}
+                  placeholder="student@example.com"
+                  type="email"
+                  value={formData.email}
+                />
+              </div>
+            </div>
+
+            <div className="campus-form-group">
+              <label htmlFor="phone">Phone</label>
+              <div className="campus-input-with-icon">
+                <Phone size={18} />
+                <input
+                  id="phone"
+                  name="phone"
+                  onChange={handleChange}
+                  placeholder="9876543210"
+                  type="tel"
+                  value={formData.phone}
+                />
+              </div>
+            </div>
+
+            <div className="campus-form-group">
+              <label htmlFor="registerPassword">Password</label>
+              <div className="campus-input-with-icon">
+                <Lock size={18} />
+                <input
+                  id="registerPassword"
+                  name="password"
+                  onChange={handleChange}
+                  placeholder="Create password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                />
+                <button
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="campus-icon-button"
+                  onClick={() => setShowPassword((prevValue) => !prevValue)}
+                  type="button"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="campus-form-group">
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <div className="campus-input-with-icon">
+                <Lock size={18} />
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  onChange={handleChange}
+                  placeholder="Confirm password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                />
+                <button
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                  className="campus-icon-button"
+                  onClick={() => setShowConfirmPassword((prevValue) => !prevValue)}
+                  type="button"
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="campus-form-group campus-form-grid-full">
+              <label>Role</label>
+              <div className="campus-role-options">
+                {roles.map((role) => (
+                  <label className="campus-role-option" key={role}>
+                    <input
+                      checked={formData.role === role}
+                      name="role"
+                      onChange={handleChange}
+                      type="radio"
+                      value={role}
+                    />
+                    <span>{role === 'department' ? 'Department' : role.charAt(0).toUpperCase() + role.slice(1)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="campus-form-group">
+              <label htmlFor="branch">Branch</label>
+              <input
+                id="branch"
+                name="branch"
+                onChange={handleChange}
+                placeholder="Computer Engineering"
+                type="text"
+                value={formData.branch}
+              />
+            </div>
+
+            <div className="campus-form-group">
+              <label htmlFor="semester">Semester</label>
+              <input
+                id="semester"
+                name="semester"
+                onChange={handleChange}
+                placeholder="6"
+                type="number"
+                value={formData.semester}
+              />
+            </div>
+
+            <div className="campus-form-group campus-form-grid-full">
+              <label htmlFor="department">Department</label>
+              <input
+                id="department"
+                name="department"
+                onChange={handleChange}
+                placeholder="Maintenance, Computer, Library"
+                type="text"
+                value={formData.department}
+              />
+            </div>
+          </div>
+
+          <button className="campus-auth-submit" type="submit">
+            Register
+            <ArrowRight size={18} />
+          </button>
+
+          <p className="campus-auth-switch">
+            Already have an account? <Link to="/login">Login</Link>
+          </p>
+        </form>
       </section>
     </main>
   );
