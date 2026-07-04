@@ -4,6 +4,9 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const modelRoutes = require('./routes/modelRoutes');
 const authRoutes = require('./routes/authRoutes');
+const complaintRoutes = require('./routes/complaintRoutes');
+const noticeRoutes = require('./routes/noticeRoutes');
+const eventRoutes = require('./routes/eventRoutes');
 
 dotenv.config();
 
@@ -16,6 +19,9 @@ app.use(cors());
 app.use(express.json());
 app.use('/api', modelRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/complaints', complaintRoutes);
+app.use('/api/notices', noticeRoutes);
+app.use('/api/events', eventRoutes);
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({
