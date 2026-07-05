@@ -165,6 +165,25 @@ select {
   font-size: 14px;
 }
 
+.header-logout-button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--color-danger);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.header-logout-button:hover {
+  border-color: #fecdd3;
+  background: #fff1f2;
+}
+
 .sidebar {
   grid-row: 2 / 4;
   background: var(--color-sidebar);

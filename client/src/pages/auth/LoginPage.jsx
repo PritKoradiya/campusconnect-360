@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import loginIllustration from '../../assets/login-illustration.png';
 import logo from '../../assets/logo.png';
+import { getDashboardPath, useAuth } from '../../context/AuthContext';
 import '../../styles/auth.css';
 
 const roles = ['student', 'admin', 'department'];
 
 function LoginPage() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     role: 'student',
     email: '',
@@ -15,6 +18,9 @@ function LoginPage() {
     rememberMe: false
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -25,9 +31,26 @@ function LoginPage() {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    console.log('Login form data:', formData);
+    setErrorMessage('');
+    setSuccessMessage('');
+    setIsSubmitting(true);
+
+    try {
+      const authData = await login({
+        email: formData.email,
+        password: formData.password,
+        role: formData.role
+      });
+
+      setSuccessMessage(authData.message || 'Login successful');
+      navigate(getDashboardPath(authData.user.role), { replace: true });
+    } catch (error) {
+      setErrorMessage(error.response?.data?.message || 'Login failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -128,9 +151,12 @@ function LoginPage() {
             <a href="#forgot-password">Forgot password?</a>
           </div>
 
-          <button className="campus-auth-submit" type="submit">
-            Login
-            <ArrowRight size={18} />
+          {errorMessage && <p className="campus-auth-message campus-auth-error">{errorMessage}</p>}
+          {successMessage && <p className="campus-auth-message campus-auth-success">{successMessage}</p>}
+
+          <button className="campus-auth-submit" disabled={isSubmitting} type="submit">
+            {isSubmitting ? 'Logging in...' : 'Login'}
+            {!isSubmitting && <ArrowRight size={18} />}
           </button>
 
           <button className="campus-google-button" type="button">

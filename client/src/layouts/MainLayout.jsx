@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import Footer from '../components/common/Footer';
 import Header from '../components/common/Header';
 import Sidebar from '../components/common/Sidebar';
+import '../styles/dashboard.css';
 
 function MainLayout() {
   return (

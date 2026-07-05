@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { ArrowRight, Eye, EyeOff, Hash, Lock, Mail, Phone, UserRound } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import loginIllustration from '../../assets/login-illustration.png';
 import logo from '../../assets/logo.png';
+import { getDashboardPath, useAuth } from '../../context/AuthContext';
 import '../../styles/auth.css';
 
 const roles = ['student', 'admin', 'department'];
 
 function RegisterPage() {
+  const navigate = useNavigate();
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
     fullName: '',
     enrollmentNo: '',
@@ -22,6 +25,9 @@ function RegisterPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -32,9 +38,43 @@ function RegisterPage() {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    console.log('Register form data:', formData);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMessage('Password and confirm password do not match');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const payload = {
+        name: formData.fullName.trim(),
+        enrollmentNo: formData.enrollmentNo.trim() || undefined,
+        email: formData.email.trim(),
+        phone: formData.phone.trim() || undefined,
+        password: formData.password,
+        role: formData.role.toLowerCase(),
+        branch: formData.branch.trim() || undefined,
+        semester: formData.semester ? Number(formData.semester) : undefined,
+        department: formData.department.trim() || undefined
+      };
+
+      console.log('Register payload:', payload);
+
+      const authData = await register(payload);
+
+      setSuccessMessage(authData.message || 'Registration successful');
+      navigate(getDashboardPath(authData.user.role), { replace: true });
+    } catch (error) {
+      console.log('Register error:', error.response?.data || error.message);
+      setErrorMessage(error.response?.data?.message || error.response?.data?.error || 'Registration failed');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -233,9 +273,12 @@ function RegisterPage() {
             </div>
           </div>
 
-          <button className="campus-auth-submit" type="submit">
-            Register
-            <ArrowRight size={18} />
+          {errorMessage && <p className="campus-auth-message campus-auth-error">{errorMessage}</p>}
+          {successMessage && <p className="campus-auth-message campus-auth-success">{successMessage}</p>}
+
+          <button className="campus-auth-submit" disabled={isSubmitting} type="submit">
+            {isSubmitting ? 'Registering...' : 'Register'}
+            {!isSubmitting && <ArrowRight size={18} />}
           </button>
 
           <p className="campus-auth-switch">

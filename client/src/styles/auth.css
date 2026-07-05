@@ -426,6 +426,33 @@
   text-align: center;
 }
 
+.campus-auth-message {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.campus-auth-error {
+  border: 1px solid rgba(251, 113, 133, 0.32);
+  background: rgba(127, 29, 29, 0.32);
+  color: #fecdd3;
+}
+
+.campus-auth-success {
+  border: 1px solid rgba(45, 212, 191, 0.32);
+  background: rgba(20, 83, 45, 0.3);
+  color: #ccfbf1;
+}
+
+.campus-auth-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
+}
+
 @media (max-width: 980px) {
   .campus-auth-shell,
   .campus-register-shell {
