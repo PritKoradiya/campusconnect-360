@@ -1,5 +1,7 @@
 import { AlertTriangle, CheckCircle2, ClipboardList, Timer } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import AnimatedCard from '../../components/ui/AnimatedCard';
+import AnimatedPage from '../../components/ui/AnimatedPage';
 
 const summaryCards = [
   { label: 'Assigned Complaints', value: '34', icon: ClipboardList, tone: 'blue' },
@@ -19,22 +21,22 @@ function DepartmentDashboard() {
   const { user } = useAuth();
 
   return (
-    <section className="dashboard-page">
-      <div className="dashboard-hero">
+    <AnimatedPage>
+      <AnimatedCard className="dashboard-hero" delay={0.05} hover={false}>
         <div>
           <p className="dashboard-kicker">Department Desk</p>
           <h1>Department Dashboard</h1>
           <p>Welcome back, {user?.name || 'Department User'}. Review assigned complaints, update progress, and prepare remarks.</p>
         </div>
         <span className="dashboard-role-pill">Department View</span>
-      </div>
+      </AnimatedCard>
 
       <div className="dashboard-grid dashboard-summary-grid">
-        {summaryCards.map((card) => {
+        {summaryCards.map((card, index) => {
           const Icon = card.icon;
 
           return (
-            <article className={`dashboard-stat-card tone-${card.tone}`} key={card.label}>
+            <AnimatedCard className={`dashboard-stat-card tone-${card.tone}`} delay={0.1 + index * 0.08} key={card.label}>
               <span className="dashboard-card-icon">
                 <Icon size={22} />
               </span>
@@ -42,12 +44,12 @@ function DepartmentDashboard() {
                 <p>{card.label}</p>
                 <strong>{card.value}</strong>
               </div>
-            </article>
+            </AnimatedCard>
           );
         })}
       </div>
 
-      <article className="dashboard-panel">
+      <AnimatedCard className="dashboard-panel" delay={0.3} hover={false}>
         <div className="dashboard-section-heading">
           <h2>Recent Assigned Complaints</h2>
           <p>Static preview for department workflow screens.</p>
@@ -68,8 +70,8 @@ function DepartmentDashboard() {
             </div>
           ))}
         </div>
-      </article>
-    </section>
+      </AnimatedCard>
+    </AnimatedPage>
   );
 }
 

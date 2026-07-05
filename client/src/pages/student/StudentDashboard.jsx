@@ -1,5 +1,7 @@
 import { Bell, Bot, CheckCircle2, Clock3, ClipboardList, FilePlus, Search, Timer } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import AnimatedCard from '../../components/ui/AnimatedCard';
+import AnimatedPage from '../../components/ui/AnimatedPage';
 
 const summaryCards = [
   { label: 'Total Complaints', value: '12', icon: ClipboardList, tone: 'blue' },
@@ -27,22 +29,22 @@ function StudentDashboard() {
   const { user } = useAuth();
 
   return (
-    <section className="dashboard-page">
-      <div className="dashboard-hero">
+    <AnimatedPage>
+      <AnimatedCard className="dashboard-hero" delay={0.05} hover={false}>
         <div>
           <p className="dashboard-kicker">Student Portal</p>
           <h1>Student Dashboard</h1>
           <p>Welcome back, {user?.name || 'Student'}. Track campus support, notices, events, and services from one place.</p>
         </div>
         <span className="dashboard-role-pill">Student View</span>
-      </div>
+      </AnimatedCard>
 
       <div className="dashboard-grid dashboard-summary-grid">
-        {summaryCards.map((card) => {
+        {summaryCards.map((card, index) => {
           const Icon = card.icon;
 
           return (
-            <article className={`dashboard-stat-card tone-${card.tone}`} key={card.label}>
+            <AnimatedCard className={`dashboard-stat-card tone-${card.tone}`} delay={0.1 + index * 0.08} key={card.label}>
               <span className="dashboard-card-icon">
                 <Icon size={22} />
               </span>
@@ -50,7 +52,7 @@ function StudentDashboard() {
                 <p>{card.label}</p>
                 <strong>{card.value}</strong>
               </div>
-            </article>
+            </AnimatedCard>
           );
         })}
       </div>
@@ -61,24 +63,24 @@ function StudentDashboard() {
           <p>Common student tasks for the next feature steps.</p>
         </div>
         <div className="dashboard-grid dashboard-action-grid">
-          {quickActions.map((action) => {
+          {quickActions.map((action, index) => {
             const Icon = action.icon;
 
             return (
-              <article className="dashboard-action-card" key={action.label}>
+              <AnimatedCard className="dashboard-action-card" delay={0.2 + index * 0.08} key={action.label}>
                 <span className="dashboard-card-icon">
                   <Icon size={22} />
                 </span>
                 <h3>{action.label}</h3>
                 <p>{action.description}</p>
-              </article>
+              </AnimatedCard>
             );
           })}
         </div>
       </div>
 
       <div className="dashboard-grid dashboard-two-column">
-        <article className="dashboard-panel">
+        <AnimatedCard className="dashboard-panel" delay={0.28} hover={false}>
           <div className="dashboard-section-heading">
             <h2>Recent Notices</h2>
             <p>Latest campus updates will appear here.</p>
@@ -91,9 +93,9 @@ function StudentDashboard() {
               </li>
             ))}
           </ul>
-        </article>
+        </AnimatedCard>
 
-        <article className="dashboard-panel">
+        <AnimatedCard className="dashboard-panel" delay={0.36} hover={false}>
           <div className="dashboard-section-heading">
             <h2>Recent Complaints</h2>
             <p>Your latest support requests.</p>
@@ -106,9 +108,9 @@ function StudentDashboard() {
               </div>
             ))}
           </div>
-        </article>
+        </AnimatedCard>
       </div>
-    </section>
+    </AnimatedPage>
   );
 }
 

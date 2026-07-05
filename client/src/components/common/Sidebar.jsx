@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import {
   BarChart3,
   Bell,
@@ -46,7 +47,12 @@ function Sidebar() {
   const links = linksByRole[user?.role] || [];
 
   return (
-    <aside className="sidebar">
+    <motion.aside
+      animate={{ opacity: 1, x: 0 }}
+      className="sidebar"
+      initial={{ opacity: 0, x: -24 }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
+    >
       <div className="sidebar-heading">
         <p className="sidebar-title">Workspace</p>
         <span>{user?.role || 'user'}</span>
@@ -56,18 +62,24 @@ function Sidebar() {
           const Icon = link.icon;
 
           return (
-            <NavLink
+            <motion.div
+              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, x: -12 }}
               key={link.path}
-              className={({ isActive }) => (isActive ? 'sidebar-link active' : 'sidebar-link')}
-              to={link.path}
+              transition={{ duration: 0.35, delay: 0.08 * links.indexOf(link), ease: 'easeOut' }}
             >
-              <Icon size={18} />
-              <span>{link.label}</span>
-            </NavLink>
+              <NavLink
+                className={({ isActive }) => (isActive ? 'sidebar-link active' : 'sidebar-link')}
+                to={link.path}
+              >
+                <Icon size={21} />
+                <span>{link.label}</span>
+              </NavLink>
+            </motion.div>
           );
         })}
       </nav>
-    </aside>
+    </motion.aside>
   );
 }
 

@@ -1,5 +1,7 @@
 import { Bell, CalendarDays, CheckCircle2, Clock3, ClipboardList, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import AnimatedCard from '../../components/ui/AnimatedCard';
+import AnimatedPage from '../../components/ui/AnimatedPage';
 
 const summaryCards = [
   { label: 'Total Users', value: '248', icon: Users, tone: 'blue' },
@@ -21,22 +23,22 @@ function AdminDashboard() {
   const { user } = useAuth();
 
   return (
-    <section className="dashboard-page">
-      <div className="dashboard-hero">
+    <AnimatedPage>
+      <AnimatedCard className="dashboard-hero" delay={0.05} hover={false}>
         <div>
           <p className="dashboard-kicker">Admin Control</p>
           <h1>Admin Dashboard</h1>
           <p>Welcome back, {user?.name || 'Admin'}. Monitor users, complaints, notices, events, and department activity.</p>
         </div>
         <span className="dashboard-role-pill">Admin View</span>
-      </div>
+      </AnimatedCard>
 
       <div className="dashboard-grid dashboard-admin-grid">
-        {summaryCards.map((card) => {
+        {summaryCards.map((card, index) => {
           const Icon = card.icon;
 
           return (
-            <article className={`dashboard-stat-card tone-${card.tone}`} key={card.label}>
+            <AnimatedCard className={`dashboard-stat-card tone-${card.tone}`} delay={0.1 + index * 0.07} key={card.label}>
               <span className="dashboard-card-icon">
                 <Icon size={22} />
               </span>
@@ -44,12 +46,12 @@ function AdminDashboard() {
                 <p>{card.label}</p>
                 <strong>{card.value}</strong>
               </div>
-            </article>
+            </AnimatedCard>
           );
         })}
       </div>
 
-      <article className="dashboard-panel">
+      <AnimatedCard className="dashboard-panel" delay={0.32} hover={false}>
         <div className="dashboard-section-heading">
           <h2>Recent Complaints</h2>
           <p>Static preview for the upcoming complaint management module.</p>
@@ -70,8 +72,8 @@ function AdminDashboard() {
             </div>
           ))}
         </div>
-      </article>
-    </section>
+      </AnimatedCard>
+    </AnimatedPage>
   );
 }
 
