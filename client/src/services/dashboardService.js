@@ -7,3 +7,7 @@ export const getStudentDashboard = () => {
 export const getAdminDashboard = () => {
   return api.get('/dashboard/admin');
 };
+
+export const getDepartmentDashboard = () => {
+  return api.get('/dashboard/department');
+};
