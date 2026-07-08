@@ -1,55 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Clock3, ClipboardList, Search, Timer, X } from 'lucide-react';
+import { CheckCircle2, Clock3, ClipboardList, Search, Timer, X, XCircle } from 'lucide-react';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
-
-const sampleComplaints = [
-  {
-    id: 'CC-1001',
-    title: 'Classroom projector not working',
-    category: 'IT Support',
-    priority: 'High',
-    date: '2026-07-02',
-    status: 'In Progress',
-    description: 'The projector in B-204 is not turning on during lectures.',
-    adminRemarks: 'Complaint assigned to IT Support Department.',
-    departmentRemarks: 'Technician visit scheduled for tomorrow morning.'
-  },
-  {
-    id: 'CC-1002',
-    title: 'Library AC cooling issue',
-    category: 'Library',
-    priority: 'Medium',
-    date: '2026-07-01',
-    status: 'Pending',
-    description: 'The reading room AC is not cooling properly in the afternoon.',
-    adminRemarks: 'Request received and under review.',
-    departmentRemarks: 'No department remarks yet.'
-  },
-  {
-    id: 'CC-1003',
-    title: 'Water leakage near staircase',
-    category: 'Maintenance',
-    priority: 'Urgent',
-    date: '2026-06-29',
-    status: 'Resolved',
-    description: 'Water leakage near block B staircase made the floor slippery.',
-    adminRemarks: 'Marked urgent due to safety concern.',
-    departmentRemarks: 'Leakage repaired and area cleaned.'
-  },
-  {
-    id: 'CC-1004',
-    title: 'Exam hall seating confusion',
-    category: 'Examination',
-    priority: 'Low',
-    date: '2026-06-25',
-    status: 'Rejected',
-    description: 'Seating chart was unclear outside the exam hall.',
-    adminRemarks: 'Duplicate complaint. Updated notice has already been shared.',
-    departmentRemarks: 'No further action needed.'
-  }
-];
+import { getComplaintById, getMyComplaints } from '../../services/complaintService';
 
 const statusOptions = ['All', 'Pending', 'In Progress', 'Resolved', 'Rejected'];
 const categoryOptions = ['All', 'Maintenance', 'IT Support', 'Library', 'Examination', 'Administration', 'Other'];
@@ -58,35 +12,137 @@ const summaryConfig = [
   { label: 'Total Complaints', status: 'All', icon: ClipboardList, tone: 'blue' },
   { label: 'Pending', status: 'Pending', icon: Clock3, tone: 'warning' },
   { label: 'In Progress', status: 'In Progress', icon: Timer, tone: 'cyan' },
-  { label: 'Resolved', status: 'Resolved', icon: CheckCircle2, tone: 'success' }
+  { label: 'Resolved', status: 'Resolved', icon: CheckCircle2, tone: 'success' },
+  { label: 'Rejected', status: 'Rejected', icon: XCircle, tone: 'danger' }
 ];
 
 function getBadgeClass(type, value) {
-  return `track-badge ${type}-${value.toLowerCase().replaceAll(' ', '-')}`;
+  return `track-badge ${type}-${(value || 'Pending').toLowerCase().replaceAll(' ', '-')}`;
+}
+
+function getComplaintList(responseData) {
+  if (Array.isArray(responseData)) {
+    return responseData;
+  }
+
+  if (Array.isArray(responseData?.complaints)) {
+    return responseData.complaints;
+  }
+
+  if (Array.isArray(responseData?.data)) {
+    return responseData.data;
+  }
+
+  if (Array.isArray(responseData?.myComplaints)) {
+    return responseData.myComplaints;
+  }
+
+  return [];
+}
+
+function getComplaintDetails(responseData) {
+  return responseData?.complaint || responseData?.data || responseData;
+}
+
+function formatDate(dateValue) {
+  if (!dateValue) {
+    return 'Not available';
+  }
+
+  return new Date(dateValue).toLocaleDateString();
+}
+
+function getDepartmentName(complaint) {
+  return complaint?.department?.name || complaint?.departmentName || complaint?.department || 'Not assigned';
+}
+
+function getRemarks(complaint, type) {
+  if (type === 'admin') {
+    return complaint?.adminRemarks || complaint?.adminRemark || complaint?.remarks || 'No admin remarks yet.';
+  }
+
+  return complaint?.departmentRemarks || complaint?.departmentRemark || 'No department remarks yet.';
 }
 
 function MyComplaints() {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [complaints, setComplaints] = useState([]);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadMyComplaints = async () => {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        setError('Session expired. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError('');
+
+        const response = await getMyComplaints();
+        setComplaints(getComplaintList(response.data));
+      } catch (err) {
+        if (err.response?.status === 401) {
+          setError('Session expired. Please login again.');
+        } else {
+          setError(err.response?.data?.message || 'Failed to load complaints');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMyComplaints();
+  }, []);
 
   const filteredComplaints = useMemo(() => {
-    return sampleComplaints.filter((complaint) => {
-      const matchesSearch = complaint.title.toLowerCase().includes(searchText.toLowerCase());
+    return complaints.filter((complaint) => {
+      const title = complaint.title || '';
+      const matchesSearch = title.toLowerCase().includes(searchText.toLowerCase());
       const matchesStatus = statusFilter === 'All' || complaint.status === statusFilter;
       const matchesCategory = categoryFilter === 'All' || complaint.category === categoryFilter;
 
       return matchesSearch && matchesStatus && matchesCategory;
     });
-  }, [searchText, statusFilter, categoryFilter]);
+  }, [complaints, searchText, statusFilter, categoryFilter]);
 
   const getSummaryCount = (status) => {
     if (status === 'All') {
-      return sampleComplaints.length;
+      return complaints.length;
     }
 
-    return sampleComplaints.filter((complaint) => complaint.status === status).length;
+    return complaints.filter((complaint) => complaint.status === status).length;
+  };
+
+  const handleViewDetails = async (complaint) => {
+    const complaintId = complaint._id || complaint.id;
+
+    if (!complaintId) {
+      setSelectedComplaint(complaint);
+      return;
+    }
+
+    try {
+      setModalLoading(true);
+      setSelectedComplaint(complaint);
+
+      const response = await getComplaintById(complaintId);
+      setSelectedComplaint(getComplaintDetails(response.data));
+    } catch (err) {
+      setSelectedComplaint(complaint);
+      setError(err.response?.data?.message || 'Failed to load complaint details');
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   return (
@@ -158,10 +214,14 @@ function MyComplaints() {
       <AnimatedCard className="dashboard-panel" delay={0.3} hover={false}>
         <div className="dashboard-section-heading">
           <h2>Complaints</h2>
-          <p>Static tracking preview for your submitted complaint history.</p>
+          <p>Your submitted complaint history from the support system.</p>
         </div>
 
-        {filteredComplaints.length > 0 ? (
+        {loading && <div className="track-empty-state">Loading complaints...</div>}
+
+        {error && <div className="track-empty-state complaint-error-message">{error}</div>}
+
+        {!loading && !error && filteredComplaints.length > 0 ? (
           <div className="track-table-wrap">
             <table className="track-table">
               <thead>
@@ -177,19 +237,19 @@ function MyComplaints() {
               </thead>
               <tbody>
                 {filteredComplaints.map((complaint) => (
-                  <tr key={complaint.id}>
-                    <td>{complaint.id}</td>
-                    <td>{complaint.title}</td>
-                    <td>{complaint.category}</td>
+                  <tr key={complaint._id || complaint.id}>
+                    <td>{complaint._id || complaint.id}</td>
+                    <td>{complaint.title || 'Untitled complaint'}</td>
+                    <td>{complaint.category || 'Other'}</td>
                     <td>
-                      <span className={getBadgeClass('priority', complaint.priority)}>{complaint.priority}</span>
+                      <span className={getBadgeClass('priority', complaint.priority)}>{complaint.priority || 'Medium'}</span>
                     </td>
-                    <td>{complaint.date}</td>
+                    <td>{formatDate(complaint.createdAt || complaint.date)}</td>
                     <td>
-                      <span className={getBadgeClass('status', complaint.status)}>{complaint.status}</span>
+                      <span className={getBadgeClass('status', complaint.status)}>{complaint.status || 'Pending'}</span>
                     </td>
                     <td>
-                      <button className="track-action-button" onClick={() => setSelectedComplaint(complaint)} type="button">
+                      <button className="track-action-button" onClick={() => handleViewDetails(complaint)} type="button">
                         View Details
                       </button>
                     </td>
@@ -198,7 +258,9 @@ function MyComplaints() {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : null}
+
+        {!loading && !error && filteredComplaints.length === 0 && (
           <div className="track-empty-state">No complaints found. Submit your first complaint to get support.</div>
         )}
       </AnimatedCard>
@@ -219,7 +281,7 @@ function MyComplaints() {
             <div className="track-modal-heading">
               <div>
                 <p className="dashboard-kicker">Complaint Details</p>
-                <h2>{selectedComplaint.title}</h2>
+                <h2>{selectedComplaint.title || 'Untitled complaint'}</h2>
               </div>
               <button className="track-close-button" onClick={() => setSelectedComplaint(null)} type="button">
                 <X size={19} />
@@ -227,13 +289,16 @@ function MyComplaints() {
             </div>
 
             <div className="track-detail-grid">
-              <p><span>Description</span>{selectedComplaint.description}</p>
-              <p><span>Category</span>{selectedComplaint.category}</p>
-              <p><span>Priority</span>{selectedComplaint.priority}</p>
-              <p><span>Status</span>{selectedComplaint.status}</p>
-              <p><span>Submitted date</span>{selectedComplaint.date}</p>
-              <p><span>Admin remarks</span>{selectedComplaint.adminRemarks}</p>
-              <p><span>Department remarks</span>{selectedComplaint.departmentRemarks}</p>
+              {modalLoading && <p><span>Loading</span>Loading complaint details...</p>}
+              <p><span>Description</span>{selectedComplaint.description || 'No description available.'}</p>
+              <p><span>Category</span>{selectedComplaint.category || 'Other'}</p>
+              <p><span>Department</span>{getDepartmentName(selectedComplaint)}</p>
+              <p><span>Priority</span>{selectedComplaint.priority || 'Medium'}</p>
+              <p><span>Status</span>{selectedComplaint.status || 'Pending'}</p>
+              <p><span>Submitted date</span>{formatDate(selectedComplaint.createdAt || selectedComplaint.date)}</p>
+              <p><span>Admin remarks</span>{getRemarks(selectedComplaint, 'admin')}</p>
+              <p><span>Department remarks</span>{getRemarks(selectedComplaint, 'department')}</p>
+              <p><span>Resolved date</span>{formatDate(selectedComplaint.resolvedAt || selectedComplaint.resolvedDate)}</p>
             </div>
 
             <button className="complaint-submit-button" onClick={() => setSelectedComplaint(null)} type="button">
