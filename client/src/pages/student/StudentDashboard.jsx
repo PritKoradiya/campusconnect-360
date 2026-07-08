@@ -1,14 +1,21 @@
-import { Bell, Bot, CheckCircle2, Clock3, ClipboardList, FilePlus, Search, Timer } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  Bell,
+  Bot,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  ClipboardList,
+  FilePlus,
+  PackageSearch,
+  Search,
+  Timer,
+  XCircle
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
-
-const summaryCards = [
-  { label: 'Total Complaints', value: '12', icon: ClipboardList, tone: 'blue' },
-  { label: 'Pending', value: '4', icon: Clock3, tone: 'warning' },
-  { label: 'In Progress', value: '5', icon: Timer, tone: 'cyan' },
-  { label: 'Resolved', value: '3', icon: CheckCircle2, tone: 'success' }
-];
+import { getStudentDashboard } from '../../services/dashboardService';
 
 const quickActions = [
   { label: 'Raise Complaint', description: 'Create a new campus service request.', icon: FilePlus },
@@ -17,16 +24,96 @@ const quickActions = [
   { label: 'Ask AI Chatbot', description: 'Get quick help for common questions.', icon: Bot }
 ];
 
-const recentNotices = ['Library timing updated for exam week', 'Tech fest registration opens soon', 'Hostel maintenance window on Friday'];
+const getItemText = (item, fallback = 'Untitled') => {
+  if (typeof item === 'string') {
+    return item;
+  }
 
-const recentComplaints = [
-  { title: 'Classroom projector issue', status: 'In Progress' },
-  { title: 'Water cooler repair', status: 'Pending' },
-  { title: 'ID card reprint request', status: 'Resolved' }
-];
+  return item?.title || item?.name || item?.message || item?.description || fallback;
+};
+
+const getComplaintStatus = (complaint) => {
+  if (typeof complaint === 'string') {
+    return 'Submitted';
+  }
+
+  return complaint?.status || 'Submitted';
+};
+
+const getEventDetail = (event) => {
+  if (typeof event === 'string') {
+    return '';
+  }
+
+  return event?.date || event?.eventDate || event?.time || '';
+};
+
+const getCountValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.length;
+  }
+
+  return value ?? 0;
+};
 
 function StudentDashboard() {
   const { user } = useAuth();
+  const [dashboardData, setDashboardData] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadStudentDashboard = async () => {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        setError('Session expired. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError('');
+
+        const response = await getStudentDashboard();
+        setDashboardData(response.data || {});
+      } catch (err) {
+        if (err.response?.status === 401) {
+          setError('Session expired. Please login again.');
+        } else {
+          setError('Unable to load dashboard data. Please try again.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStudentDashboard();
+  }, []);
+
+  const recentNotices = Array.isArray(dashboardData.recentNotices) ? dashboardData.recentNotices : [];
+  const recentComplaints = Array.isArray(dashboardData.recentComplaints) ? dashboardData.recentComplaints : [];
+  const upcomingEvents = Array.isArray(dashboardData.upcomingEvents) ? dashboardData.upcomingEvents : [];
+
+  const summaryCards = [
+    { label: 'Total Complaints', value: getCountValue(dashboardData.totalComplaints), icon: ClipboardList, tone: 'blue' },
+    { label: 'Pending', value: getCountValue(dashboardData.pendingComplaints), icon: Clock3, tone: 'warning' },
+    { label: 'In Progress', value: getCountValue(dashboardData.inProgressComplaints), icon: Timer, tone: 'cyan' },
+    { label: 'Resolved', value: getCountValue(dashboardData.resolvedComplaints), icon: CheckCircle2, tone: 'success' }
+  ];
+
+  if (dashboardData.rejectedComplaints !== undefined) {
+    summaryCards.push({ label: 'Rejected Complaints', value: getCountValue(dashboardData.rejectedComplaints), icon: XCircle, tone: 'danger' });
+  }
+
+  if (dashboardData.myLostFoundItems !== undefined) {
+    summaryCards.push({ label: 'Lost & Found Items', value: getCountValue(dashboardData.myLostFoundItems), icon: PackageSearch, tone: 'cyan' });
+  }
+
+  if (dashboardData.chatbotQuestions !== undefined) {
+    summaryCards.push({ label: 'Chatbot Questions', value: getCountValue(dashboardData.chatbotQuestions), icon: Bot, tone: 'blue' });
+  }
 
   return (
     <AnimatedPage>
@@ -38,6 +125,21 @@ function StudentDashboard() {
         </div>
         <span className="dashboard-role-pill">Student View</span>
       </AnimatedCard>
+
+      {loading && (
+        <AnimatedCard className="dashboard-panel" delay={0.08} hover={false}>
+          <p>Loading student dashboard...</p>
+        </AnimatedCard>
+      )}
+
+      {error && (
+        <AnimatedCard className="dashboard-panel tone-danger" delay={0.08} hover={false}>
+          <div className="dashboard-section-heading">
+            <h2>{error}</h2>
+            <p>Your dashboard will stay available here once the session is active.</p>
+          </div>
+        </AnimatedCard>
+      )}
 
       <div className="dashboard-grid dashboard-summary-grid">
         {summaryCards.map((card, index) => {
@@ -86,12 +188,19 @@ function StudentDashboard() {
             <p>Latest campus updates will appear here.</p>
           </div>
           <ul className="dashboard-list">
-            {recentNotices.map((notice) => (
-              <li key={notice}>
+            {recentNotices.length > 0 ? (
+              recentNotices.map((notice, index) => (
+                <li key={notice?._id || notice?.id || `${getItemText(notice)}-${index}`}>
+                  <Bell size={17} />
+                  <span>{getItemText(notice, 'Notice update')}</span>
+                </li>
+              ))
+            ) : (
+              <li>
                 <Bell size={17} />
-                <span>{notice}</span>
+                <span>No recent notices available.</span>
               </li>
-            ))}
+            )}
           </ul>
         </AnimatedCard>
 
@@ -101,15 +210,47 @@ function StudentDashboard() {
             <p>Your latest support requests.</p>
           </div>
           <div className="dashboard-table">
-            {recentComplaints.map((complaint) => (
-              <div className="dashboard-table-row" key={complaint.title}>
-                <span>{complaint.title}</span>
-                <span className="dashboard-status">{complaint.status}</span>
+            {recentComplaints.length > 0 ? (
+              recentComplaints.map((complaint, index) => (
+                <div className="dashboard-table-row" key={complaint?._id || complaint?.id || `${getItemText(complaint)}-${index}`}>
+                  <span>{getItemText(complaint, 'Complaint request')}</span>
+                  <span className="dashboard-status">{getComplaintStatus(complaint)}</span>
+                </div>
+              ))
+            ) : (
+              <div className="dashboard-table-row">
+                <span>No complaints submitted yet.</span>
+                <span className="dashboard-status">Empty</span>
               </div>
-            ))}
+            )}
           </div>
         </AnimatedCard>
       </div>
+
+      <AnimatedCard className="dashboard-panel" delay={0.44} hover={false}>
+        <div className="dashboard-section-heading">
+          <h2>Upcoming Events</h2>
+          <p>Campus events scheduled for students.</p>
+        </div>
+        <ul className="dashboard-list">
+          {upcomingEvents.length > 0 ? (
+            upcomingEvents.map((event, index) => (
+              <li key={event?._id || event?.id || `${getItemText(event, 'Event')}-${index}`}>
+                <CalendarDays size={17} />
+                <span>
+                  {getItemText(event, 'Campus event')}
+                  {getEventDetail(event) && ` - ${getEventDetail(event)}`}
+                </span>
+              </li>
+            ))
+          ) : (
+            <li>
+              <CalendarDays size={17} />
+              <span>No upcoming events available.</span>
+            </li>
+          )}
+        </ul>
+      </AnimatedCard>
     </AnimatedPage>
   );
 }

@@ -2,14 +2,14 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
-  grid-template-rows: 76px 1fr auto;
+  grid-template-rows: 72px 1fr auto;
   background: #06111f;
   color: #ffffff;
 }
 
 .header {
   grid-column: 1 / -1;
-  min-height: 76px;
+  min-height: 72px;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -19,7 +19,7 @@
   gap: 18px;
   padding: 0 28px;
   border-bottom: 1px solid rgba(56, 189, 248, 0.22);
-  background: linear-gradient(180deg, rgba(8, 24, 39, 0.98), rgba(7, 21, 37, 0.96));
+  background: #071525;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(16px);
 }
@@ -138,9 +138,9 @@
 .sidebar {
   grid-row: 2 / 4;
   width: 280px;
-  max-height: calc(100vh - 76px);
+  max-height: calc(100vh - 72px);
   position: sticky;
-  top: 76px;
+  top: 72px;
   overflow-y: auto;
   padding: 26px 18px;
   border-right: 1px solid rgba(56, 189, 248, 0.18);
@@ -240,8 +240,8 @@
 .footer {
   grid-column: 2;
   padding: 16px 28px;
-  border-top: 1px solid rgba(56, 189, 248, 0.18);
-  background: #081827;
+  border-top: 1px solid rgba(56, 189, 248, 0.22);
+  background: #071525;
   color: #94a3b8;
   font-size: 13px;
 }
