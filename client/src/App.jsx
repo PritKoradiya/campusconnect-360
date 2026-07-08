@@ -6,7 +6,9 @@ import RegisterPage from './pages/auth/RegisterPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import DepartmentDashboard from './pages/department/DepartmentDashboard';
 import NotFoundPage from './pages/public/NotFoundPage';
+import Events from './pages/student/Events';
 import MyComplaints from './pages/student/MyComplaints';
+import Notices from './pages/student/Notices';
 import StudentDashboard from './pages/student/StudentDashboard';
 import SubmitComplaint from './pages/student/SubmitComplaint';
 
@@ -23,6 +25,8 @@ function App() {
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/submit-complaint" element={<SubmitComplaint />} />
             <Route path="/student/my-complaints" element={<MyComplaints />} />
+            <Route path="/student/notices" element={<Notices />} />
+            <Route path="/student/events" element={<Events />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />

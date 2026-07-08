@@ -946,6 +946,106 @@
   text-transform: uppercase;
 }
 
+.resource-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.resource-card {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 20px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 12px;
+  background: #0f1e33;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+  transition: border-color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.resource-card:hover {
+  border-color: rgba(34, 211, 238, 0.42);
+  background: #132744;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(34, 211, 238, 0.06);
+}
+
+.resource-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #22d3ee;
+}
+
+.resource-card h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.resource-card p {
+  margin: 0;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.resource-meta {
+  display: grid;
+  gap: 8px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.resource-meta span {
+  padding: 9px 10px;
+  border: 1px solid rgba(56, 189, 248, 0.13);
+  border-radius: 8px;
+  background: rgba(8, 24, 39, 0.52);
+}
+
+.resource-badge {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.notice-normal,
+.event-badge {
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  background: rgba(34, 211, 238, 0.1);
+  color: #a5f3fc;
+}
+
+.notice-important {
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  background: rgba(249, 115, 22, 0.12);
+  color: #fdba74;
+}
+
+.notice-urgent {
+  border: 1px solid rgba(239, 68, 68, 0.34);
+  background: rgba(127, 29, 29, 0.2);
+  color: #fecaca;
+}
+
+.resource-modal-image {
+  width: 100%;
+  max-height: 260px;
+  display: block;
+  object-fit: cover;
+  margin-top: 18px;
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 10px;
+}
+
 @media (max-width: 1100px) {
   .dashboard-summary-grid,
   .dashboard-admin-grid,
@@ -959,6 +1059,10 @@
 
   .track-filter-card {
     grid-template-columns: 1fr;
+  }
+
+  .resource-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1040,6 +1144,10 @@
 
   .complaint-submit-button {
     width: 100%;
+  }
+
+  .resource-card-grid {
+    grid-template-columns: 1fr;
   }
 }
 
