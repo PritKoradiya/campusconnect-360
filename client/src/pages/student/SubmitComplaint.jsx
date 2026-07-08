@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Bot, ImagePlus, Send, Sparkles } from 'lucide-react';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
+import { createComplaint } from '../../services/complaintService';
 
 const initialFormData = {
   title: '',
@@ -25,7 +26,9 @@ const priorities = ['Low', 'Medium', 'High', 'Urgent'];
 
 function SubmitComplaint() {
   const [formData, setFormData] = useState(initialFormData);
-  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -34,6 +37,8 @@ function SubmitComplaint() {
       ...formData,
       [name]: value
     });
+    setError('');
+    setSuccess('');
   };
 
   const handleImageChange = (event) => {
@@ -46,13 +51,52 @@ function SubmitComplaint() {
   };
 
   const handleAiClick = () => {
-    setMessage('This AI feature will be connected later.');
+    setError('');
+    setSuccess('AI feature will be connected later.');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    console.log('Complaint form data:', formData);
-    setMessage('Complaint form UI is ready. API connection will be added in next step.');
+
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      setSuccess('');
+      setError('Session expired. Please login again.');
+      return;
+    }
+
+    const descriptionWithLocation = formData.location.trim()
+      ? `${formData.description}\n\nLocation: ${formData.location}`
+      : formData.description;
+
+    const complaintPayload = {
+      title: formData.title,
+      description: descriptionWithLocation,
+      category: formData.category,
+      department: formData.department,
+      priority: formData.priority,
+      imageUrl: ''
+    };
+
+    try {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+
+      await createComplaint(complaintPayload);
+
+      setSuccess('Complaint submitted successfully.');
+      setFormData(initialFormData);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setError('Session expired. Please login again.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to submit complaint');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -156,11 +200,12 @@ function SubmitComplaint() {
             </button>
           </div>
 
-          {message && <p className="complaint-message">{message}</p>}
+          {success && <p className="complaint-message">{success}</p>}
+          {error && <p className="complaint-message complaint-error-message">{error}</p>}
 
-          <button className="complaint-submit-button" type="submit">
+          <button className="complaint-submit-button" disabled={loading} type="submit">
             <Send size={18} />
-            Submit Complaint
+            {loading ? 'Submitting...' : 'Submit Complaint'}
           </button>
         </form>
       </AnimatedCard>

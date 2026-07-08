@@ -681,6 +681,13 @@
   box-shadow: 0 22px 46px rgba(34, 211, 238, 0.22);
 }
 
+.complaint-submit-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+  transform: none;
+  box-shadow: none;
+}
+
 .complaint-message {
   margin: 0;
   padding: 13px 14px;
@@ -689,6 +696,12 @@
   background: rgba(34, 211, 238, 0.09);
   color: #a5f3fc;
   font-weight: 750;
+}
+
+.complaint-error-message {
+  border-color: rgba(239, 68, 68, 0.34);
+  background: rgba(127, 29, 29, 0.16);
+  color: #fecaca;
 }
 
 @media (max-width: 1100px) {
