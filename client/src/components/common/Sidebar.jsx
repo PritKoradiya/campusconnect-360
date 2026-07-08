@@ -19,7 +19,7 @@ const linksByRole = {
   student: [
     { label: 'Dashboard', path: '/student/dashboard', icon: LayoutDashboard },
     { label: 'Submit Complaint', path: '/student/submit-complaint', icon: FilePlus },
-    { label: 'My Complaints', path: '/student/complaints', icon: ClipboardList },
+    { label: 'My Complaints', path: '/student/my-complaints', icon: ClipboardList },
     { label: 'Notices', path: '/student/notices', icon: Bell },
     { label: 'Events', path: '/student/events', icon: CalendarDays },
     { label: 'Lost & Found', path: '/student/lost-found', icon: Search },
