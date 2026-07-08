@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 const linksByRole = {
   student: [
     { label: 'Dashboard', path: '/student/dashboard', icon: LayoutDashboard },
-    { label: 'Submit Complaint', path: '/student/complaints/new', icon: FilePlus },
+    { label: 'Submit Complaint', path: '/student/submit-complaint', icon: FilePlus },
     { label: 'My Complaints', path: '/student/complaints', icon: ClipboardList },
     { label: 'Notices', path: '/student/notices', icon: Bell },
     { label: 'Events', path: '/student/events', icon: CalendarDays },

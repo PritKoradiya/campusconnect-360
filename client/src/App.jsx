@@ -7,6 +7,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import DepartmentDashboard from './pages/department/DepartmentDashboard';
 import NotFoundPage from './pages/public/NotFoundPage';
 import StudentDashboard from './pages/student/StudentDashboard';
+import SubmitComplaint from './pages/student/SubmitComplaint';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route element={<MainLayout />}>
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
             <Route path="/student/dashboard" element={<StudentDashboard />} />
+            <Route path="/student/submit-complaint" element={<SubmitComplaint />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
