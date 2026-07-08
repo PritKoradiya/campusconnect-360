@@ -7,6 +7,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import DepartmentDashboard from './pages/department/DepartmentDashboard';
 import NotFoundPage from './pages/public/NotFoundPage';
 import Events from './pages/student/Events';
+import LostFound from './pages/student/LostFound';
 import MyComplaints from './pages/student/MyComplaints';
 import Notices from './pages/student/Notices';
 import StudentDashboard from './pages/student/StudentDashboard';
@@ -27,6 +28,7 @@ function App() {
             <Route path="/student/my-complaints" element={<MyComplaints />} />
             <Route path="/student/notices" element={<Notices />} />
             <Route path="/student/events" element={<Events />} />
+            <Route path="/student/lost-found" element={<LostFound />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
