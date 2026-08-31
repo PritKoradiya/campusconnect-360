@@ -6,6 +6,7 @@ import RegisterPage from './pages/auth/RegisterPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import DepartmentDashboard from './pages/department/DepartmentDashboard';
 import NotFoundPage from './pages/public/NotFoundPage';
+import Chatbot from './pages/student/Chatbot';
 import Events from './pages/student/Events';
 import LostFound from './pages/student/LostFound';
 import MyComplaints from './pages/student/MyComplaints';
@@ -29,6 +30,7 @@ function App() {
             <Route path="/student/notices" element={<Notices />} />
             <Route path="/student/events" element={<Events />} />
             <Route path="/student/lost-found" element={<LostFound />} />
+            <Route path="/student/chatbot" element={<Chatbot />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
