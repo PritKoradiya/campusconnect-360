@@ -2001,3 +2001,124 @@
   }
 }
 
+/* ==================================================
+   ADMIN MANAGE COMPLAINTS STYLING
+================================================== */
+
+.admin-complaints-filter-card {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.4fr) repeat(5, minmax(130px, 1fr));
+  gap: 14px;
+}
+
+.admin-filter-field-search {
+  grid-column: span 2;
+}
+
+.admin-delete-icon-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(127, 29, 29, 0.18);
+  color: #fca5a5;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.admin-delete-icon-btn:hover {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.28);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.25);
+}
+
+.admin-details-modal-card {
+  width: min(840px, 100%);
+}
+
+.admin-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-detail-fullwidth {
+  grid-column: 1 / -1;
+}
+
+.admin-modal-action-box {
+  padding: 18px 20px;
+  border-radius: 10px;
+  background: rgba(8, 24, 39, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+}
+
+.admin-modal-action-box h3 {
+  margin: 0 0 12px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.admin-action-form {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-form-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.admin-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(56, 189, 248, 0.16);
+}
+
+@media (max-width: 1200px) {
+  .admin-complaints-filter-card {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-filter-field-search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-complaints-filter-card {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-form-row button {
+    width: 100%;
+  }
+
+  .admin-modal-footer {
+    flex-direction: column;
+  }
+
+  .admin-modal-footer button {
+    width: 100%;
+  }
+}
+
+
