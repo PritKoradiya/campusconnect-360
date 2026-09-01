@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Activity,
   AlertCircle,
   Building2,
   CheckCircle2,
@@ -10,6 +9,7 @@ import {
   Eye,
   RotateCcw,
   Search,
+  SlidersHorizontal,
   Timer,
   Trash2,
   User,
@@ -25,6 +25,7 @@ import {
   getComplaintById,
   updateComplaintStatus
 } from '../../services/adminComplaintService';
+import { getDepartments } from '../../services/departmentService';
 
 const statusFilterOptions = ['All', 'Pending', 'In Progress', 'Resolved', 'Rejected'];
 const priorityFilterOptions = ['All', 'Low', 'Medium', 'High', 'Urgent'];
@@ -73,6 +74,9 @@ function getDepartmentId(complaint) {
   if (complaint?.department && typeof complaint.department === 'object') {
     return complaint.department._id || '';
   }
+  if (typeof complaint?.department === 'string') {
+    return complaint.department;
+  }
   return '';
 }
 
@@ -99,13 +103,22 @@ function getComplaintList(responseData) {
   return [];
 }
 
+function getDepartmentList(responseData) {
+  if (Array.isArray(responseData)) return responseData;
+  if (Array.isArray(responseData?.departments)) return responseData.departments;
+  if (Array.isArray(responseData?.data)) return responseData.data;
+  return [];
+}
+
 function getComplaintDetails(responseData) {
   return responseData?.complaint || responseData?.data || responseData;
 }
 
 function ManageComplaints() {
   const [complaints, setComplaints] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -124,16 +137,27 @@ function ManageComplaints() {
   const [newStatus, setNewStatus] = useState('Pending');
   const [adminRemarksInput, setAdminRemarksInput] = useState('');
 
-  // Department Assign States
+  // In-Modal Department Assign State
   const [assigningDept, setAssigningDept] = useState(false);
   const [selectedDeptId, setSelectedDeptId] = useState('');
+
+  // Direct Row Quick-Action Modal States
+  const [assignModalComplaint, setAssignModalComplaint] = useState(null);
+  const [quickAssignDeptId, setQuickAssignDeptId] = useState('');
+  const [quickAssigning, setQuickAssigning] = useState(false);
+
+  const [statusModalComplaint, setStatusModalComplaint] = useState(null);
+  const [quickStatus, setQuickStatus] = useState('Pending');
+  const [quickRemarks, setQuickRemarks] = useState('');
+  const [quickUpdatingStatus, setQuickUpdatingStatus] = useState(false);
 
   // Delete Modal States
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [complaintToDelete, setComplaintToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchComplaints = async () => {
+  // Fetch Complaints & Real Departments from MongoDB
+  const fetchComplaints = async (isManualRefresh = false) => {
     const token = localStorage.getItem('token');
     if (!token) {
       setError('Session expired. Please login again.');
@@ -142,18 +166,31 @@ function ManageComplaints() {
     }
 
     try {
-      setLoading(true);
+      if (isManualRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError('');
-      const response = await getAllComplaints();
-      setComplaints(getComplaintList(response.data));
+
+      const [complaintsRes, deptRes] = await Promise.all([
+        getAllComplaints(),
+        getDepartments()
+      ]);
+
+      setComplaints(getComplaintList(complaintsRes.data));
+      setDepartments(getDepartmentList(deptRes.data));
     } catch (err) {
       if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
+      } else if (err.response?.status === 403) {
+        setError('You are not authorized to perform this action.');
       } else {
         setError(err.response?.data?.message || 'Failed to load complaints');
       }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -170,33 +207,14 @@ function ManageComplaints() {
     return ['All', ...Array.from(categories).sort()];
   }, [complaints]);
 
-  // Dynamically derive unique departments from real data
+  // Dynamically derive unique departments from real complaint data
   const derivedDepartments = useMemo(() => {
-    const departments = new Set();
+    const deptNames = new Set();
     complaints.forEach((c) => {
       const name = getDepartmentName(c);
-      if (name && name !== 'Unassigned') departments.add(name);
+      if (name && name !== 'Unassigned') deptNames.add(name);
     });
-    return ['All', ...Array.from(departments).sort()];
-  }, [complaints]);
-
-  // Extract available department objects with real IDs for assignment
-  const availableDepartments = useMemo(() => {
-    const map = new Map();
-    complaints.forEach((c) => {
-      if (
-        c.department &&
-        typeof c.department === 'object' &&
-        c.department._id &&
-        c.department.name
-      ) {
-        map.set(c.department._id.toString(), {
-          _id: c.department._id.toString(),
-          name: c.department.name
-        });
-      }
-    });
-    return Array.from(map.values());
+    return ['All', ...Array.from(deptNames).sort()];
   }, [complaints]);
 
   // Summary counts
@@ -205,14 +223,14 @@ function ManageComplaints() {
   const inProgressCount = complaints.filter((c) => c.status === 'In Progress').length;
   const resolvedCount = complaints.filter((c) => c.status === 'Resolved').length;
   const rejectedCount = complaints.filter((c) => c.status === 'Rejected').length;
-  const hasRejected = complaints.some((c) => c.status === 'Rejected');
 
   // Filtered & Sorted Complaints
   const filteredComplaints = useMemo(() => {
     return complaints
       .filter((complaint) => {
         const title = (complaint.title || '').toLowerCase();
-        const student = getStudentName(complaint).toLowerCase();
+        const studentName = getStudentName(complaint).toLowerCase();
+        const studentEnrollment = (complaint.student?.enrollmentNo || complaint.enrollmentNo || '').toLowerCase();
         const category = (complaint.category || '').toLowerCase();
         const department = getDepartmentName(complaint).toLowerCase();
         const query = searchText.toLowerCase().trim();
@@ -220,7 +238,8 @@ function ManageComplaints() {
         const matchesSearch =
           !query ||
           title.includes(query) ||
-          student.includes(query) ||
+          studentName.includes(query) ||
+          studentEnrollment.includes(query) ||
           category.includes(query) ||
           department.includes(query);
 
@@ -256,7 +275,7 @@ function ManageComplaints() {
     sortBy
   ]);
 
-  // View Details Modal
+  // View Details Modal Trigger
   const handleViewDetails = async (complaint) => {
     const complaintId = complaint._id || complaint.id;
     if (!complaintId) {
@@ -282,13 +301,19 @@ function ManageComplaints() {
       setAdminRemarksInput(details.adminRemarks || '');
       setSelectedDeptId(getDepartmentId(details) || '');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load full complaint details');
+      if (err.response?.status === 401) {
+        setError('Session expired. Please login again.');
+      } else if (err.response?.status === 403) {
+        setError('You are not authorized to perform this action.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to load full complaint details');
+      }
     } finally {
       setModalLoading(false);
     }
   };
 
-  // Update Status
+  // Status Update from within View Details Modal
   const handleUpdateStatus = async (e) => {
     e.preventDefault();
     if (!selectedComplaint) return;
@@ -312,7 +337,7 @@ function ManageComplaints() {
         adminRemarks: adminRemarksInput
       };
 
-      // Update in complaints state
+      // Update local state without full reload
       setComplaints((prev) =>
         prev.map((c) => ((c._id || c.id) === complaintId ? { ...c, ...updated } : c))
       );
@@ -321,6 +346,8 @@ function ManageComplaints() {
     } catch (err) {
       if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
+      } else if (err.response?.status === 403) {
+        setError('You are not authorized to perform this action.');
       } else {
         setError(err.response?.data?.message || 'Failed to update complaint status');
       }
@@ -329,7 +356,7 @@ function ManageComplaints() {
     }
   };
 
-  // Assign Department
+  // Department Assignment from within View Details Modal
   const handleAssignDepartment = async (e) => {
     e.preventDefault();
     if (!selectedComplaint || !selectedDeptId) return;
@@ -351,24 +378,23 @@ function ManageComplaints() {
         setSelectedComplaint(updated);
       } else {
         // Fallback update
-        const assignedObj = availableDepartments.find((d) => d._id === selectedDeptId);
+        const assignedObj = departments.find((d) => d._id === selectedDeptId);
+        const updatedLocal = {
+          ...selectedComplaint,
+          department: assignedObj || { _id: selectedDeptId, name: 'Department' },
+          status: 'In Progress'
+        };
         setComplaints((prev) =>
-          prev.map((c) =>
-            (c._id || c.id) === complaintId
-              ? { ...c, department: assignedObj || selectedDeptId, status: 'In Progress' }
-              : c
-          )
+          prev.map((c) => ((c._id || c.id) === complaintId ? updatedLocal : c))
         );
-        setSelectedComplaint((prev) =>
-          prev
-            ? { ...prev, department: assignedObj || selectedDeptId, status: 'In Progress' }
-            : null
-        );
+        setSelectedComplaint(updatedLocal);
       }
       setSuccess('Complaint assigned to department successfully.');
     } catch (err) {
       if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
+      } else if (err.response?.status === 403) {
+        setError('You are not authorized to perform this action.');
       } else {
         setError(err.response?.data?.message || 'Failed to assign complaint to department');
       }
@@ -377,13 +403,121 @@ function ManageComplaints() {
     }
   };
 
-  // Open Delete Modal
+  // Quick Action: Open Assign Modal from Table Row
+  const openQuickAssignModal = (complaint) => {
+    setAssignModalComplaint(complaint);
+    setQuickAssignDeptId(getDepartmentId(complaint) || '');
+  };
+
+  // Quick Action: Submit Assign Department
+  const handleQuickAssignSubmit = async (e) => {
+    e.preventDefault();
+    if (!assignModalComplaint || !quickAssignDeptId) return;
+    const complaintId = assignModalComplaint._id || assignModalComplaint.id;
+    if (!complaintId) return;
+
+    try {
+      setQuickAssigning(true);
+      setError('');
+      setSuccess('');
+
+      const response = await assignComplaintToDepartment(complaintId, quickAssignDeptId);
+      const updated = response.data?.complaint;
+
+      if (updated) {
+        setComplaints((prev) =>
+          prev.map((c) => ((c._id || c.id) === complaintId ? updated : c))
+        );
+        if (selectedComplaint && (selectedComplaint._id || selectedComplaint.id) === complaintId) {
+          setSelectedComplaint(updated);
+        }
+      } else {
+        const assignedObj = departments.find((d) => d._id === quickAssignDeptId);
+        const updatedLocal = {
+          ...assignModalComplaint,
+          department: assignedObj || { _id: quickAssignDeptId, name: 'Department' },
+          status: 'In Progress'
+        };
+        setComplaints((prev) =>
+          prev.map((c) => ((c._id || c.id) === complaintId ? updatedLocal : c))
+        );
+      }
+
+      setAssignModalComplaint(null);
+      setSuccess('Complaint assigned to department successfully.');
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setError('Session expired. Please login again.');
+      } else if (err.response?.status === 403) {
+        setError('You are not authorized to perform this action.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to assign department');
+      }
+    } finally {
+      setQuickAssigning(false);
+    }
+  };
+
+  // Quick Action: Open Status Modal from Table Row
+  const openQuickStatusModal = (complaint) => {
+    setStatusModalComplaint(complaint);
+    setQuickStatus(complaint.status || 'Pending');
+    setQuickRemarks(complaint.adminRemarks || '');
+  };
+
+  // Quick Action: Submit Status Update
+  const handleQuickStatusSubmit = async (e) => {
+    e.preventDefault();
+    if (!statusModalComplaint) return;
+    const complaintId = statusModalComplaint._id || statusModalComplaint.id;
+    if (!complaintId) return;
+
+    try {
+      setQuickUpdatingStatus(true);
+      setError('');
+      setSuccess('');
+
+      const payload = {
+        status: quickStatus,
+        adminRemarks: quickRemarks
+      };
+
+      const response = await updateComplaintStatus(complaintId, payload);
+      const updated = response.data?.complaint || {
+        ...statusModalComplaint,
+        status: quickStatus,
+        adminRemarks: quickRemarks
+      };
+
+      setComplaints((prev) =>
+        prev.map((c) => ((c._id || c.id) === complaintId ? { ...c, ...updated } : c))
+      );
+      if (selectedComplaint && (selectedComplaint._id || selectedComplaint.id) === complaintId) {
+        setSelectedComplaint((prev) => ({ ...prev, ...updated }));
+      }
+
+      setStatusModalComplaint(null);
+      setSuccess('Complaint status updated successfully.');
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setError('Session expired. Please login again.');
+      } else if (err.response?.status === 403) {
+        setError('You are not authorized to perform this action.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to update complaint status');
+      }
+    } finally {
+      setQuickUpdatingStatus(false);
+    }
+  };
+
+  // Open Delete Confirmation Modal
   const openDeleteModal = (complaint) => {
     setComplaintToDelete(complaint);
     setDeleteModalOpen(true);
   };
 
-  // Confirm Delete
+  // Confirm Delete Complaint
   const handleConfirmDelete = async () => {
     if (!complaintToDelete) return;
     const complaintId = complaintToDelete._id || complaintToDelete.id;
@@ -396,8 +530,9 @@ function ManageComplaints() {
 
       await deleteComplaint(complaintId);
 
-      // Remove from list
+      // Remove from list and update counts
       setComplaints((prev) => prev.filter((c) => (c._id || c.id) !== complaintId));
+
       if (selectedComplaint && (selectedComplaint._id || selectedComplaint.id) === complaintId) {
         setSelectedComplaint(null);
       }
@@ -408,6 +543,8 @@ function ManageComplaints() {
     } catch (err) {
       if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
+      } else if (err.response?.status === 403) {
+        setError('You are not authorized to perform this action.');
       } else {
         setError(err.response?.data?.message || 'Failed to delete complaint');
       }
@@ -421,13 +558,29 @@ function ManageComplaints() {
       {/* Hero Header */}
       <AnimatedCard className="dashboard-hero" delay={0.05} hover={false}>
         <div>
-          <p className="dashboard-kicker">Admin Complaint Management</p>
+          <p className="dashboard-kicker">Admin Desk</p>
           <h1>Manage Complaints</h1>
-          <p>
-            Review, assign, update, and manage student complaints from one place.
-          </p>
+          <p>Review, manage, assign, and resolve student complaints.</p>
         </div>
-        <span className="dashboard-role-pill">Admin Control</span>
+        <div className="admin-header-actions">
+          <button
+            className="admin-refresh-btn"
+            disabled={refreshing || loading}
+            onClick={() => fetchComplaints(true)}
+            title="Refresh complaints and departments"
+            type="button"
+          >
+            <motion.span
+              animate={refreshing ? { rotate: 360 } : { rotate: 0 }}
+              style={{ display: 'inline-flex' }}
+              transition={{ repeat: refreshing ? Infinity : 0, duration: 1, ease: 'linear' }}
+            >
+              <RotateCcw size={16} />
+            </motion.span>
+            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+          <span className="dashboard-role-pill">Admin Control</span>
+        </div>
       </AnimatedCard>
 
       {/* Summary Cards */}
@@ -472,29 +625,27 @@ function ManageComplaints() {
           </div>
         </AnimatedCard>
 
-        {hasRejected && (
-          <AnimatedCard className="dashboard-stat-card tone-danger" delay={0.24}>
-            <span className="dashboard-card-icon">
-              <XCircle size={22} />
-            </span>
-            <div>
-              <p>Rejected</p>
-              <strong>{rejectedCount}</strong>
-            </div>
-          </AnimatedCard>
-        )}
+        <AnimatedCard className="dashboard-stat-card tone-danger" delay={0.24}>
+          <span className="dashboard-card-icon">
+            <XCircle size={22} />
+          </span>
+          <div>
+            <p>Rejected</p>
+            <strong>{rejectedCount}</strong>
+          </div>
+        </AnimatedCard>
       </div>
 
       {/* Filter and Search Section */}
       <AnimatedCard className="track-filter-card admin-complaints-filter-card" delay={0.26} hover={false}>
-        {/* Search */}
+        {/* Search Field */}
         <label className="complaint-field admin-filter-field-search">
           <span>Search Complaints</span>
           <div className="track-search-box">
             <Search size={18} />
             <input
               onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search by title, student, category, department..."
+              placeholder="Search by title, student, enrollment, category, department..."
               type="text"
               value={searchText}
             />
@@ -596,26 +747,70 @@ function ManageComplaints() {
       <AnimatedCard className="dashboard-panel" delay={0.3} hover={false}>
         <div className="dashboard-section-heading">
           <h2>All Complaints ({filteredComplaints.length})</h2>
-          <p>Complete complaint registry with status management and department routing.</p>
+          <p>Complete complaint registry with review, department routing, and status resolution.</p>
         </div>
 
+        {/* Loading Skeletons */}
         {loading && (
-          <div className="track-empty-state">
-            <div className="chatbot-loading-spinner" style={{ margin: '12px auto' }} />
-            <p>Loading complaints...</p>
+          <div className="track-table-wrap">
+            <table className="track-table">
+              <thead>
+                <tr>
+                  <th>Complaint ID</th>
+                  <th>Student</th>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Department</th>
+                  <th>Priority</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3, 4, 5].map((item) => (
+                  <tr key={item}>
+                    <td><div className="admin-skeleton-line" style={{ width: '60px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '120px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '160px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '90px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '110px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '70px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '80px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '75px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '130px' }} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
+        {/* Empty State: No Complaints in Database */}
         {!loading && complaints.length === 0 && (
-          <div className="track-empty-state">No complaints available.</div>
+          <div className="track-empty-state">
+            <ClipboardList size={36} style={{ color: '#22d3ee', margin: '0 auto 10px' }} />
+            <p style={{ margin: 0, fontWeight: 750, color: '#e0f2fe' }}>No complaints available.</p>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#94a3b8' }}>
+              Student submitted complaints will appear here for review and resolution.
+            </p>
+          </div>
         )}
 
+        {/* Empty State: Filter / Search Mismatch */}
         {!loading && complaints.length > 0 && filteredComplaints.length === 0 && (
           <div className="track-empty-state">
-            No complaints match your current search or filters.
+            <Search size={36} style={{ color: '#fbbf24', margin: '0 auto 10px' }} />
+            <p style={{ margin: 0, fontWeight: 750, color: '#e0f2fe' }}>
+              No complaints match your current search or filters.
+            </p>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#94a3b8' }}>
+              Try adjusting your search terms or clearing some active filters.
+            </p>
           </div>
         )}
 
+        {/* Populated Complaints Table */}
         {!loading && filteredComplaints.length > 0 && (
           <div className="track-table-wrap">
             <table className="track-table">
@@ -636,20 +831,34 @@ function ManageComplaints() {
                 {filteredComplaints.map((complaint) => {
                   const id = complaint._id || complaint.id || '';
                   const shortId = id ? `#${id.slice(-6).toUpperCase()}` : 'N/A';
+                  const studentName = getStudentName(complaint);
+                  const studentEnrollment = getStudentEnrollment(complaint);
 
                   return (
-                    <tr key={id}>
-                      <td title={id} style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
+                    <motion.tr
+                      animate={{ opacity: 1, y: 0 }}
+                      initial={{ opacity: 0, y: 6 }}
+                      key={id}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <td style={{ fontFamily: 'monospace', fontWeight: 'bold' }} title={id}>
                         {shortId}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <User size={15} color="#22d3ee" />
-                          <span>{getStudentName(complaint)}</span>
+                        <div className="admin-student-cell">
+                          <div className="admin-student-name">
+                            <User color="#22d3ee" size={14} />
+                            <span>{studentName}</span>
+                          </div>
+                          {studentEnrollment && studentEnrollment !== 'Not available' && (
+                            <span className="admin-student-enroll">({studentEnrollment})</span>
+                          )}
                         </div>
                       </td>
                       <td>
-                        <strong>{complaint.title || 'Untitled complaint'}</strong>
+                        <strong style={{ color: '#ffffff' }}>
+                          {complaint.title || 'Untitled complaint'}
+                        </strong>
                       </td>
                       <td>{complaint.category || 'Other'}</td>
                       <td>
@@ -669,28 +878,53 @@ function ManageComplaints() {
                         </span>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="admin-action-btn-group">
+                          {/* View Action */}
                           <button
-                            className="track-action-button"
+                            className="admin-action-btn view"
                             onClick={() => handleViewDetails(complaint)}
                             title="View full details and manage"
                             type="button"
                           >
-                            <Eye size={15} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                            View Details
+                            <Eye size={14} />
+                            <span>View</span>
                           </button>
+
+                          {/* Assign Action */}
+                          <button
+                            className="admin-action-btn assign"
+                            onClick={() => openQuickAssignModal(complaint)}
+                            title="Assign to department"
+                            type="button"
+                          >
+                            <Building2 size={14} />
+                            <span>Assign</span>
+                          </button>
+
+                          {/* Status Action */}
+                          <button
+                            className="admin-action-btn status"
+                            onClick={() => openQuickStatusModal(complaint)}
+                            title="Update status"
+                            type="button"
+                          >
+                            <SlidersHorizontal size={14} />
+                            <span>Status</span>
+                          </button>
+
+                          {/* Delete Action */}
                           <button
                             aria-label="Delete complaint"
-                            className="admin-delete-icon-btn"
+                            className="admin-action-btn delete"
                             onClick={() => openDeleteModal(complaint)}
                             title="Delete complaint"
                             type="button"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   );
                 })}
               </tbody>
@@ -699,7 +933,7 @@ function ManageComplaints() {
         )}
       </AnimatedCard>
 
-      {/* View Details & Management Modal */}
+      {/* 1. View Complaint Details Modal */}
       <AnimatePresence>
         {selectedComplaint && (
           <motion.div
@@ -741,11 +975,14 @@ function ManageComplaints() {
 
               {/* Optional Complaint Image */}
               {selectedComplaint.imageUrl && (
-                <img
-                  alt={selectedComplaint.title}
-                  className="resource-modal-image"
-                  src={selectedComplaint.imageUrl}
-                />
+                <div style={{ marginTop: '14px', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(56, 189, 248, 0.22)' }}>
+                  <img
+                    alt={selectedComplaint.title}
+                    className="resource-modal-image"
+                    src={selectedComplaint.imageUrl}
+                    style={{ width: '100%', maxHeight: '280px', objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
               )}
 
               {/* Detail Grid */}
@@ -849,31 +1086,31 @@ function ManageComplaints() {
                 </form>
               </div>
 
-              {/* Action Section: Assign to Department */}
-              <div className="admin-modal-action-box" style={{ marginTop: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  <Building2 size={18} color="#22d3ee" />
+              {/* Action Section: Assign to Real Department */}
+              <div className="admin-modal-action-box">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <Building2 color="#22d3ee" size={18} />
                   <h3 style={{ margin: 0 }}>Assign to Department</h3>
                 </div>
-                <p style={{ color: '#94a3b8', fontSize: '13.5px', margin: '0 0 12px' }}>
+                <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 12px' }}>
                   Current Department:{' '}
                   <strong style={{ color: '#a5f3fc' }}>{getDepartmentName(selectedComplaint)}</strong>
                 </p>
 
-                {availableDepartments.length > 0 ? (
+                {departments.length > 0 ? (
                   <form className="admin-action-form" onSubmit={handleAssignDepartment}>
                     <div className="admin-form-row">
                       <label className="complaint-field" style={{ flex: 1 }}>
-                        <span>Select Target Department</span>
+                        <span>Target Department</span>
                         <select
                           disabled={assigningDept}
                           onChange={(e) => setSelectedDeptId(e.target.value)}
                           value={selectedDeptId}
                         >
                           <option value="">-- Choose Department --</option>
-                          {availableDepartments.map((dept) => (
+                          {departments.map((dept) => (
                             <option key={dept._id} value={dept._id}>
-                              {dept.name}
+                              {dept.name} {dept.code ? `(${dept.code})` : ''}
                             </option>
                           ))}
                         </select>
@@ -891,7 +1128,7 @@ function ManageComplaints() {
                   </form>
                 ) : (
                   <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
-                    No department profiles found in active complaints to assign.
+                    No active departments found. Create departments in the Department Management module first.
                   </p>
                 )}
               </div>
@@ -919,7 +1156,187 @@ function ManageComplaints() {
         )}
       </AnimatePresence>
 
-      {/* Delete Confirmation Modal */}
+      {/* 2. Quick Department Assignment Modal */}
+      <AnimatePresence>
+        {assignModalComplaint && (
+          <motion.div
+            animate={{ opacity: 1 }}
+            className="track-modal-backdrop"
+            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="track-modal-card"
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              style={{ maxWidth: '540px' }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <div className="track-modal-heading">
+                <div>
+                  <p className="dashboard-kicker">Department Routing</p>
+                  <h2>Assign Complaint</h2>
+                </div>
+                <button
+                  aria-label="Close modal"
+                  className="track-close-button"
+                  onClick={() => setAssignModalComplaint(null)}
+                  type="button"
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              <div style={{ margin: '16px 0', padding: '14px', borderRadius: '10px', background: 'rgba(8, 24, 39, 0.7)', border: '1px solid rgba(56, 189, 248, 0.16)' }}>
+                <p style={{ margin: '0 0 6px', color: '#cbd5e1', fontSize: '13.5px' }}>
+                  <strong>Complaint:</strong> {assignModalComplaint.title}
+                </p>
+                <p style={{ margin: '0 0 6px', color: '#cbd5e1', fontSize: '13.5px' }}>
+                  <strong>Student:</strong> {getStudentName(assignModalComplaint)}
+                </p>
+                <p style={{ margin: 0, color: '#cbd5e1', fontSize: '13.5px' }}>
+                  <strong>Current Department:</strong> <span style={{ color: '#a5f3fc' }}>{getDepartmentName(assignModalComplaint)}</span>
+                </p>
+              </div>
+
+              <form onSubmit={handleQuickAssignSubmit}>
+                <label className="complaint-field" style={{ marginBottom: '20px' }}>
+                  <span>Select Target Department</span>
+                  <select
+                    disabled={quickAssigning}
+                    onChange={(e) => setQuickAssignDeptId(e.target.value)}
+                    value={quickAssignDeptId}
+                  >
+                    <option value="">-- Choose Department --</option>
+                    {departments.map((dept) => (
+                      <option key={dept._id} value={dept._id}>
+                        {dept.name} {dept.code ? `(${dept.code})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="chatbot-confirm-actions">
+                  <button
+                    className="complaint-secondary-button"
+                    disabled={quickAssigning}
+                    onClick={() => setAssignModalComplaint(null)}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="complaint-submit-button"
+                    disabled={quickAssigning || !quickAssignDeptId}
+                    type="submit"
+                  >
+                    {quickAssigning ? 'Assigning...' : 'Assign Department'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 3. Quick Status Update Modal */}
+      <AnimatePresence>
+        {statusModalComplaint && (
+          <motion.div
+            animate={{ opacity: 1 }}
+            className="track-modal-backdrop"
+            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="track-modal-card"
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              style={{ maxWidth: '540px' }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <div className="track-modal-heading">
+                <div>
+                  <p className="dashboard-kicker">Status Management</p>
+                  <h2>Update Status</h2>
+                </div>
+                <button
+                  aria-label="Close modal"
+                  className="track-close-button"
+                  onClick={() => setStatusModalComplaint(null)}
+                  type="button"
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              <div style={{ margin: '16px 0', padding: '14px', borderRadius: '10px', background: 'rgba(8, 24, 39, 0.7)', border: '1px solid rgba(56, 189, 248, 0.16)' }}>
+                <p style={{ margin: '0 0 6px', color: '#cbd5e1', fontSize: '13.5px' }}>
+                  <strong>Complaint:</strong> {statusModalComplaint.title}
+                </p>
+                <p style={{ margin: 0, color: '#cbd5e1', fontSize: '13.5px' }}>
+                  <strong>Current Status:</strong>{' '}
+                  <span className={getBadgeClass('status', statusModalComplaint.status)}>
+                    {statusModalComplaint.status || 'Pending'}
+                  </span>
+                </p>
+              </div>
+
+              <form onSubmit={handleQuickStatusSubmit}>
+                <label className="complaint-field" style={{ marginBottom: '14px' }}>
+                  <span>Select Status</span>
+                  <select
+                    disabled={quickUpdatingStatus}
+                    onChange={(e) => setQuickStatus(e.target.value)}
+                    value={quickStatus}
+                  >
+                    {statusUpdateOptions.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="complaint-field" style={{ marginBottom: '20px' }}>
+                  <span>Admin Remarks</span>
+                  <input
+                    disabled={quickUpdatingStatus}
+                    onChange={(e) => setQuickRemarks(e.target.value)}
+                    placeholder="Add official remarks..."
+                    type="text"
+                    value={quickRemarks}
+                  />
+                </label>
+
+                <div className="chatbot-confirm-actions">
+                  <button
+                    className="complaint-secondary-button"
+                    disabled={quickUpdatingStatus}
+                    onClick={() => setStatusModalComplaint(null)}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="complaint-submit-button"
+                    disabled={quickUpdatingStatus}
+                    type="submit"
+                  >
+                    {quickUpdatingStatus ? 'Updating...' : 'Save Status'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 4. Delete Confirmation Modal */}
       <AnimatePresence>
         {deleteModalOpen && complaintToDelete && (
           <motion.div
@@ -980,7 +1397,7 @@ function ManageComplaints() {
                   onClick={handleConfirmDelete}
                   type="button"
                 >
-                  {deleting ? 'Deleting...' : 'Delete'}
+                  {deleting ? 'Deleting...' : 'Delete Complaint'}
                 </button>
               </div>
             </motion.div>

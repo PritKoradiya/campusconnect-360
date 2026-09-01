@@ -2322,5 +2322,220 @@
   }
 }
 
+/* Admin Manage Complaints Styles */
+.admin-complaints-filter-card {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) repeat(4, minmax(135px, 0.8fr)) minmax(135px, 0.8fr);
+  gap: 14px;
+}
 
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
+.admin-refresh-btn {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 10px;
+  background: rgba(15, 30, 51, 0.85);
+  color: #a5f3fc;
+  font-size: 13.5px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.admin-refresh-btn:hover {
+  border-color: rgba(34, 211, 238, 0.65);
+  background: rgba(19, 39, 68, 0.95);
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(34, 211, 238, 0.18);
+}
+
+.admin-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-action-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.admin-action-btn {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.admin-action-btn.view {
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: rgba(37, 99, 235, 0.18);
+  color: #a5f3fc;
+}
+
+.admin-action-btn.view:hover {
+  border-color: rgba(34, 211, 238, 0.65);
+  background: rgba(37, 99, 235, 0.35);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.admin-action-btn.assign {
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  background: rgba(147, 51, 234, 0.18);
+  color: #e9d5ff;
+}
+
+.admin-action-btn.assign:hover {
+  border-color: rgba(192, 132, 252, 0.7);
+  background: rgba(147, 51, 234, 0.32);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.admin-action-btn.status {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.15);
+  color: #fde68a;
+}
+
+.admin-action-btn.status:hover {
+  border-color: rgba(251, 191, 36, 0.7);
+  background: rgba(245, 158, 11, 0.28);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.admin-action-btn.delete {
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  padding: 0 8px;
+}
+
+.admin-action-btn.delete:hover {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.admin-details-modal-card {
+  width: min(820px, 100%);
+  max-height: calc(100vh - 48px);
+}
+
+.admin-detail-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.admin-detail-fullwidth {
+  grid-column: 1 / -1;
+}
+
+.admin-modal-action-box {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 10px;
+  background: rgba(8, 24, 39, 0.65);
+}
+
+.admin-modal-action-box h3 {
+  margin: 0 0 12px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.admin-form-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(56, 189, 248, 0.16);
+  flex-wrap: wrap;
+}
+
+.admin-student-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-student-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 750;
+  color: #ffffff;
+}
+
+.admin-student-enroll {
+  color: #94a3b8;
+  font-size: 11.5px;
+  font-family: monospace;
+}
+
+/* Skeleton Loading */
+.admin-skeleton-line {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(15, 30, 51, 0.8) 25%, rgba(34, 211, 238, 0.12) 50%, rgba(15, 30, 51, 0.8) 75%);
+  background-size: 200% 100%;
+  animation: adminSkeletonShimmer 1.5s infinite;
+}
+
+@keyframes adminSkeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 1100px) {
+  .admin-complaints-filter-card {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-complaints-filter-card {
+    grid-template-columns: 1fr;
+  }
+  .admin-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
