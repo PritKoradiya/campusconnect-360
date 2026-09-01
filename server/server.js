@@ -11,6 +11,7 @@ const eventRoutes = require('./routes/eventRoutes');
 const lostFoundRoutes = require('./routes/lostFoundRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.use(cors());
 app.use(express.json());
 app.use('/api', modelRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/notices', noticeRoutes);

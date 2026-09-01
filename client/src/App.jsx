@@ -6,6 +6,7 @@ import RegisterPage from './pages/auth/RegisterPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Departments from './pages/admin/Departments';
 import ManageComplaints from './pages/admin/ManageComplaints';
+import ManageUsers from './pages/admin/ManageUsers';
 import DepartmentDashboard from './pages/department/DepartmentDashboard';
 import NotFoundPage from './pages/public/NotFoundPage';
 import Chatbot from './pages/student/Chatbot';
@@ -36,6 +37,7 @@ function App() {
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<ManageUsers />} />
             <Route path="/admin/departments" element={<Departments />} />
             <Route path="/admin/complaints" element={<ManageComplaints />} />
           </Route>
