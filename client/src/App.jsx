@@ -6,6 +6,7 @@ import RegisterPage from './pages/auth/RegisterPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Departments from './pages/admin/Departments';
 import ManageComplaints from './pages/admin/ManageComplaints';
+import ManageNotices from './pages/admin/ManageNotices';
 import ManageUsers from './pages/admin/ManageUsers';
 import DepartmentDashboard from './pages/department/DepartmentDashboard';
 import NotFoundPage from './pages/public/NotFoundPage';
@@ -40,6 +41,7 @@ function App() {
             <Route path="/admin/users" element={<ManageUsers />} />
             <Route path="/admin/departments" element={<Departments />} />
             <Route path="/admin/complaints" element={<ManageComplaints />} />
+            <Route path="/admin/notices" element={<ManageNotices />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['department']} />}>
             <Route path="/department/dashboard" element={<DepartmentDashboard />} />
