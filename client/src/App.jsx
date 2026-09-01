@@ -51,6 +51,8 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['department']} />}>
             <Route path="/department/dashboard" element={<DepartmentDashboard />} />
             <Route path="/department/complaints" element={<DepartmentComplaints />} />
+            <Route path="/department/status" element={<DepartmentComplaints />} />
+            <Route path="/department/remarks" element={<DepartmentComplaints />} />
           </Route>
         </Route>
 
