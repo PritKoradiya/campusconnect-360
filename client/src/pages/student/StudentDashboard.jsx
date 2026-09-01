@@ -77,7 +77,8 @@ function StudentDashboard() {
         setError('');
 
         const response = await getStudentDashboard();
-        setDashboardData(response.data || {});
+        const summaryData = response.data?.summary || response.data?.data || response.data || {};
+        setDashboardData(summaryData);
       } catch (err) {
         if (err.response?.status === 401) {
           setError('Session expired. Please login again.');

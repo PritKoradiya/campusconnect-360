@@ -39,8 +39,8 @@ function RegisterPage() {
           setDeptLoading(true);
           const response = await getDepartments();
           setAvailableDepartments(response.data?.departments || []);
-        } catch (err) {
-          console.log('Could not fetch departments for register:', err);
+        } catch {
+          // In case department fetch fails on register load, user can still input department as text
         } finally {
           setDeptLoading(false);
         }
@@ -84,14 +84,11 @@ function RegisterPage() {
         department: formData.department.trim() || undefined
       };
 
-      console.log('Register payload:', payload);
-
       const authData = await register(payload);
 
       setSuccessMessage(authData.message || 'Registration successful');
       navigate(getDashboardPath(authData.user.role), { replace: true });
     } catch (error) {
-      console.log('Register error:', error.response?.data || error.message);
       setErrorMessage(error.response?.data?.message || error.response?.data?.error || 'Registration failed');
     } finally {
       setIsSubmitting(false);

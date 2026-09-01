@@ -6,28 +6,22 @@ import {
   CheckCircle2,
   ClipboardList,
   Clock3,
-  Edit3,
   Eye,
-  MessageSquareText,
   RotateCcw,
   Search,
   Timer,
-  User,
-  X,
-  XCircle
+  X
 } from 'lucide-react';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
 import { useAuth } from '../../context/AuthContext';
 import {
   getComplaintById,
-  getDepartmentComplaints,
-  updateDepartmentComplaintStatus
+  getDepartmentComplaints
 } from '../../services/complaintService';
 
 const statusFilterOptions = ['All', 'Pending', 'In Progress', 'Resolved', 'Rejected'];
 const priorityFilterOptions = ['All', 'Low', 'Medium', 'High', 'Urgent'];
-const allowedUpdateStatuses = ['Pending', 'In Progress', 'Resolved'];
 
 function formatDate(dateValue) {
   if (!dateValue) return 'Not available';
@@ -87,7 +81,6 @@ function DepartmentComplaints() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   // Filters, Search & Sort
   const [searchText, setSearchText] = useState('');
@@ -96,23 +89,9 @@ function DepartmentComplaints() {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
 
-  // View Details Modal State
+  // View Details Modal State (Read-Only)
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
-
-  // Update Status & Remarks Modal State
-  const [updateModalOpen, setUpdateModalOpen] = useState(false);
-  const [complaintToUpdate, setComplaintToUpdate] = useState(null);
-  const [newStatus, setNewStatus] = useState('In Progress');
-  const [deptRemarks, setDeptRemarks] = useState('');
-  const [updating, setUpdating] = useState(false);
-  const [updateError, setUpdateError] = useState('');
-
-  // Resolve Confirmation Modal State
-  const [resolveModalOpen, setResolveModalOpen] = useState(false);
-  const [complaintToResolve, setComplaintToResolve] = useState(null);
-  const [resolvingRemarks, setResolvingRemarks] = useState('');
-  const [resolving, setResolving] = useState(false);
 
   const fetchComplaints = async (isManualRefresh = false) => {
     const token = localStorage.getItem('token');
@@ -136,7 +115,7 @@ function DepartmentComplaints() {
       if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
       } else if (err.response?.status === 403) {
-        setError('You are not authorized to access department complaints.');
+        setError('You are not authorized to view these complaints.');
       } else {
         setError(err.response?.data?.message || 'Failed to load assigned complaints');
       }
@@ -161,7 +140,7 @@ function DepartmentComplaints() {
     return ['All', ...Array.from(cats).sort()];
   }, [complaints]);
 
-  // Real Summary Counts
+  // Real Summary Counts from loaded complaints
   const totalAssigned = complaints.length;
   const pendingCount = complaints.filter((c) => (c.status || '').toLowerCase() === 'pending').length;
   const inProgressCount = complaints.filter((c) => (c.status || '').toLowerCase() === 'in progress').length;
@@ -214,7 +193,7 @@ function DepartmentComplaints() {
       });
   }, [complaints, searchText, statusFilter, priorityFilter, categoryFilter, sortBy]);
 
-  // View Details Handler
+  // View Details Handler (Read-Only)
   const handleViewDetails = async (complaint) => {
     const id = complaint._id || complaint.id;
     if (!id) {
@@ -234,7 +213,7 @@ function DepartmentComplaints() {
       if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
       } else if (err.response?.status === 403) {
-        setError('You are not authorized to view this complaint.');
+        setError('You are not authorized to view these complaints.');
       } else {
         setError(err.response?.data?.message || 'Failed to load complaint details');
       }
@@ -243,122 +222,14 @@ function DepartmentComplaints() {
     }
   };
 
-  // Open Update Status & Remarks Modal
-  const openUpdateModal = (complaint) => {
-    setComplaintToUpdate(complaint);
-    setNewStatus(complaint.status || 'In Progress');
-    setDeptRemarks(complaint.departmentRemarks || '');
-    setUpdateError('');
-    setUpdateModalOpen(true);
-  };
-
-  // Submit Status & Remarks Update
-  const handleUpdateSubmit = async (e) => {
-    e.preventDefault();
-    if (!complaintToUpdate) return;
-    const id = complaintToUpdate._id || complaintToUpdate.id;
-    if (!id) return;
-
-    try {
-      setUpdating(true);
-      setUpdateError('');
-      setError('');
-      setSuccess('');
-
-      const payload = {
-        status: newStatus,
-        departmentRemarks: deptRemarks.trim()
-      };
-
-      const response = await updateDepartmentComplaintStatus(id, payload);
-      const updated = response.data?.complaint || { ...complaintToUpdate, ...payload };
-
-      setComplaints((prev) =>
-        prev.map((c) => ((c._id || c.id) === id ? { ...c, ...updated } : c))
-      );
-
-      if (selectedComplaint && (selectedComplaint._id || selectedComplaint.id) === id) {
-        setSelectedComplaint((prev) => ({ ...prev, ...updated }));
-      }
-
-      setUpdateModalOpen(false);
-      setComplaintToUpdate(null);
-      setSuccess('Complaint status & department remarks updated successfully.');
-    } catch (err) {
-      if (err.response?.status === 401) {
-        setUpdateError('Session expired. Please login again.');
-      } else if (err.response?.status === 403) {
-        setUpdateError('You are not authorized to manage this complaint.');
-      } else {
-        setUpdateError(err.response?.data?.message || 'Failed to update complaint.');
-      }
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  // Open Resolve Confirmation Modal
-  const openResolveModal = (complaint) => {
-    setComplaintToResolve(complaint);
-    setResolvingRemarks(complaint.departmentRemarks || '');
-    setResolveModalOpen(true);
-  };
-
-  // Confirm Resolve Complaint
-  const handleConfirmResolve = async () => {
-    if (!complaintToResolve) return;
-    const id = complaintToResolve._id || complaintToResolve.id;
-    if (!id) return;
-
-    try {
-      setResolving(true);
-      setError('');
-      setSuccess('');
-
-      const payload = {
-        status: 'Resolved',
-        departmentRemarks: resolvingRemarks.trim()
-      };
-
-      const response = await updateDepartmentComplaintStatus(id, payload);
-      const updated = response.data?.complaint || {
-        ...complaintToResolve,
-        ...payload,
-        resolvedAt: new Date()
-      };
-
-      setComplaints((prev) =>
-        prev.map((c) => ((c._id || c.id) === id ? { ...c, ...updated } : c))
-      );
-
-      if (selectedComplaint && (selectedComplaint._id || selectedComplaint.id) === id) {
-        setSelectedComplaint((prev) => ({ ...prev, ...updated }));
-      }
-
-      setResolveModalOpen(false);
-      setComplaintToResolve(null);
-      setSuccess('Complaint marked as resolved.');
-    } catch (err) {
-      if (err.response?.status === 401) {
-        setError('Session expired. Please login again.');
-      } else if (err.response?.status === 403) {
-        setError('You are not authorized to manage this complaint.');
-      } else {
-        setError(err.response?.data?.message || 'Failed to resolve complaint.');
-      }
-    } finally {
-      setResolving(false);
-    }
-  };
-
   return (
     <AnimatedPage>
-      {/* Hero Header */}
+      {/* Page Header */}
       <AnimatedCard className="dashboard-hero" delay={0.05} hover={false}>
         <div>
-          <p className="dashboard-kicker">Department Desk</p>
+          <p className="dashboard-kicker">DEPARTMENT DESK</p>
           <h1>Assigned Complaints</h1>
-          <p>Review, investigate, and resolve grievances assigned to your department.</p>
+          <p>View complaints assigned to your department and review their current status.</p>
         </div>
         <div className="admin-header-actions">
           <button
@@ -443,9 +314,9 @@ function DepartmentComplaints() {
           </div>
         </label>
 
-        {/* Status Filter */}
+        {/* Status Filter (Filter Only) */}
         <label className="complaint-field">
-          <span>Status</span>
+          <span>Filter by Status</span>
           <select onChange={(e) => setStatusFilter(e.target.value)} value={statusFilter}>
             {statusFilterOptions.map((status) => (
               <option key={status} value={status}>
@@ -457,7 +328,7 @@ function DepartmentComplaints() {
 
         {/* Priority Filter */}
         <label className="complaint-field">
-          <span>Priority</span>
+          <span>Filter by Priority</span>
           <select onChange={(e) => setPriorityFilter(e.target.value)} value={priorityFilter}>
             {priorityFilterOptions.map((priority) => (
               <option key={priority} value={priority}>
@@ -469,7 +340,7 @@ function DepartmentComplaints() {
 
         {/* Category Filter */}
         <label className="complaint-field">
-          <span>Category</span>
+          <span>Filter by Category</span>
           <select onChange={(e) => setCategoryFilter(e.target.value)} value={categoryFilter}>
             {derivedCategories.map((cat) => (
               <option key={cat} value={cat}>
@@ -492,21 +363,6 @@ function DepartmentComplaints() {
 
       {/* Global Alerts */}
       <AnimatePresence>
-        {success && (
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className="chatbot-alert chatbot-alert-success"
-            exit={{ opacity: 0, y: -10 }}
-            initial={{ opacity: 0, y: -10 }}
-          >
-            <CheckCircle2 size={18} />
-            <span>{success}</span>
-            <button className="chatbot-alert-close" onClick={() => setSuccess('')} type="button">
-              <X size={15} />
-            </button>
-          </motion.div>
-        )}
-
         {error && (
           <motion.div
             animate={{ opacity: 1, y: 0 }}
@@ -523,7 +379,7 @@ function DepartmentComplaints() {
         )}
       </AnimatePresence>
 
-      {/* Complaints Table Panel */}
+      {/* Complaints Table Panel (Assigned Worklist) */}
       <AnimatedCard className="dashboard-panel" delay={0.28} hover={false}>
         <div className="dashboard-section-heading">
           <h2>Assigned Worklist ({filteredComplaints.length})</h2>
@@ -541,9 +397,9 @@ function DepartmentComplaints() {
                   <th>Title</th>
                   <th>Category</th>
                   <th>Priority</th>
-                  <th>Date</th>
+                  <th>Submitted Date</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -556,7 +412,7 @@ function DepartmentComplaints() {
                     <td><div className="admin-skeleton-line" style={{ width: '75px' }} /></td>
                     <td><div className="admin-skeleton-line" style={{ width: '80px' }} /></td>
                     <td><div className="admin-skeleton-line" style={{ width: '85px' }} /></td>
-                    <td><div className="admin-skeleton-line" style={{ width: '130px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '100px' }} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -564,7 +420,7 @@ function DepartmentComplaints() {
           </div>
         )}
 
-        {/* Empty State: No Complaints */}
+        {/* Empty State: No Complaints Assigned */}
         {!loading && complaints.length === 0 && (
           <div className="track-empty-state">
             <CheckCircle2 size={36} style={{ color: '#22d3ee', margin: '0 auto 10px' }} />
@@ -577,7 +433,7 @@ function DepartmentComplaints() {
           </div>
         )}
 
-        {/* Empty State: Filter produced 0 */}
+        {/* Empty State: Filter / Search Produced 0 Matches */}
         {!loading && complaints.length > 0 && filteredComplaints.length === 0 && (
           <div className="track-empty-state">
             <Search size={36} style={{ color: '#fbbf24', margin: '0 auto 10px' }} />
@@ -601,16 +457,15 @@ function DepartmentComplaints() {
                   <th>Title</th>
                   <th>Category</th>
                   <th>Priority</th>
-                  <th>Date</th>
+                  <th>Submitted Date</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredComplaints.map((item) => {
                   const id = item._id || item.id || '';
                   const shortId = id.length > 6 ? `#${id.slice(-6).toUpperCase()}` : id;
-                  const isResolved = (item.status || '').toLowerCase() === 'resolved';
 
                   return (
                     <motion.tr
@@ -655,42 +510,16 @@ function DepartmentComplaints() {
                         </span>
                       </td>
                       <td>
-                        <div className="admin-action-btn-group">
-                          {/* View Details */}
-                          <button
-                            className="admin-action-btn view"
-                            onClick={() => handleViewDetails(item)}
-                            title="View complaint details"
-                            type="button"
-                          >
-                            <Eye size={14} />
-                            <span>View</span>
-                          </button>
-
-                          {/* Update Status & Remarks */}
-                          <button
-                            className="admin-action-btn assign"
-                            onClick={() => openUpdateModal(item)}
-                            title="Update status & department remarks"
-                            type="button"
-                          >
-                            <Edit3 size={14} />
-                            <span>Update</span>
-                          </button>
-
-                          {/* Quick Resolve Button */}
-                          {!isResolved && (
-                            <button
-                              className="admin-action-btn toggle-inactive"
-                              onClick={() => openResolveModal(item)}
-                              title="Mark complaint as resolved"
-                              type="button"
-                            >
-                              <CheckCircle2 size={14} />
-                              <span>Resolve</span>
-                            </button>
-                          )}
-                        </div>
+                        {/* View Details Only Action */}
+                        <button
+                          className="admin-action-btn view"
+                          onClick={() => handleViewDetails(item)}
+                          title="View full complaint details"
+                          type="button"
+                        >
+                          <Eye size={14} />
+                          <span>View Details</span>
+                        </button>
                       </td>
                     </motion.tr>
                   );
@@ -701,7 +530,7 @@ function DepartmentComplaints() {
         )}
       </AnimatedCard>
 
-      {/* 1. View Complaint Details Modal */}
+      {/* View Complaint Details Modal (Strictly Read-Only) */}
       <AnimatePresence>
         {selectedComplaint && (
           <motion.div
@@ -722,7 +551,7 @@ function DepartmentComplaints() {
               {/* Modal Header */}
               <div className="track-modal-heading">
                 <div>
-                  <p className="dashboard-kicker">Grievance Record</p>
+                  <p className="dashboard-kicker">Complaint Details</p>
                   <h2>{selectedComplaint.title || 'Untitled Complaint'}</h2>
                 </div>
                 <button
@@ -751,7 +580,7 @@ function DepartmentComplaints() {
                 />
               )}
 
-              {/* Detail Grid */}
+              {/* Read-Only Detail Grid */}
               <div className="track-detail-grid admin-detail-grid">
                 <p>
                   <span>Student Name</span>
@@ -815,231 +644,14 @@ function DepartmentComplaints() {
                 )}
               </div>
 
-              {/* Modal Footer Controls */}
-              <div className="admin-modal-footer">
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    className="admin-action-btn assign"
-                    onClick={() => {
-                      const obj = selectedComplaint;
-                      setSelectedComplaint(null);
-                      openUpdateModal(obj);
-                    }}
-                    style={{ minHeight: '38px', padding: '0 14px' }}
-                    type="button"
-                  >
-                    <Edit3 size={15} />
-                    <span>Update Status / Remarks</span>
-                  </button>
-
-                  {(selectedComplaint.status || '').toLowerCase() !== 'resolved' && (
-                    <button
-                      className="admin-action-btn toggle-inactive"
-                      onClick={() => {
-                        const obj = selectedComplaint;
-                        setSelectedComplaint(null);
-                        openResolveModal(obj);
-                      }}
-                      style={{ minHeight: '38px', padding: '0 14px' }}
-                      type="button"
-                    >
-                      <CheckCircle2 size={15} />
-                      <span>Mark Resolved</span>
-                    </button>
-                  )}
-                </div>
-
+              {/* Modal Footer Controls (View-Only / Close Only) */}
+              <div className="admin-modal-footer" style={{ justifyContent: 'flex-end' }}>
                 <button
                   className="complaint-secondary-button"
                   onClick={() => setSelectedComplaint(null)}
                   type="button"
                 >
                   Close
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 2. Update Status & Remarks Modal */}
-      <AnimatePresence>
-        {updateModalOpen && complaintToUpdate && (
-          <motion.div
-            animate={{ opacity: 1 }}
-            className="track-modal-backdrop"
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <motion.div
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="track-modal-card admin-details-modal-card"
-              exit={{ opacity: 0, scale: 0.96, y: 16 }}
-              initial={{ opacity: 0, scale: 0.96, y: 16 }}
-              style={{ maxWidth: '580px' }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-            >
-              <div className="track-modal-heading">
-                <div>
-                  <p className="dashboard-kicker">Department Action</p>
-                  <h2>Update Status & Remarks</h2>
-                </div>
-                <button
-                  aria-label="Close modal"
-                  className="track-close-button"
-                  onClick={() => setUpdateModalOpen(false)}
-                  type="button"
-                >
-                  <X size={19} />
-                </button>
-              </div>
-
-              {updateError && (
-                <div className="chatbot-alert chatbot-alert-error" style={{ margin: '14px 0 6px' }}>
-                  <AlertCircle size={17} />
-                  <span>{updateError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleUpdateSubmit} style={{ marginTop: '16px' }}>
-                <p style={{ margin: '0 0 14px', fontSize: '13.5px', color: '#94a3b8' }}>
-                  Updating complaint: <strong style={{ color: '#e0f2fe' }}>{complaintToUpdate.title}</strong>
-                </p>
-
-                {/* Status Dropdown */}
-                <label className="complaint-field">
-                  <span>Complaint Status *</span>
-                  <select
-                    disabled={updating}
-                    onChange={(e) => setNewStatus(e.target.value)}
-                    value={newStatus}
-                  >
-                    {allowedUpdateStatuses.map((st) => (
-                      <option key={st} value={st}>
-                        {st}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                {/* Department Remarks */}
-                <label className="complaint-field" style={{ marginTop: '14px' }}>
-                  <span>Department Remarks</span>
-                  <textarea
-                    disabled={updating}
-                    onChange={(e) => setDeptRemarks(e.target.value)}
-                    placeholder="Enter notes on investigation, steps taken, or resolution details for the student..."
-                    rows={4}
-                    value={deptRemarks}
-                  />
-                </label>
-
-                <div className="chatbot-confirm-actions" style={{ marginTop: '20px' }}>
-                  <button
-                    className="complaint-secondary-button"
-                    disabled={updating}
-                    onClick={() => setUpdateModalOpen(false)}
-                    type="button"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="complaint-submit-button"
-                    disabled={updating}
-                    type="submit"
-                  >
-                    {updating ? 'Saving Changes...' : 'Save Updates'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 3. Resolve Confirmation Modal */}
-      <AnimatePresence>
-        {resolveModalOpen && complaintToResolve && (
-          <motion.div
-            animate={{ opacity: 1 }}
-            className="track-modal-backdrop"
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <motion.div
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="track-modal-card chatbot-confirm-modal"
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              style={{ maxWidth: '520px' }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-            >
-              <div className="track-modal-heading">
-                <div>
-                  <p className="dashboard-kicker">Confirmation</p>
-                  <h2>Resolve Complaint</h2>
-                </div>
-                <button
-                  aria-label="Close modal"
-                  className="track-close-button"
-                  onClick={() => setResolveModalOpen(false)}
-                  type="button"
-                >
-                  <X size={19} />
-                </button>
-              </div>
-
-              <div className="chatbot-confirm-body">
-                <div
-                  className="chatbot-confirm-icon-wrap"
-                  style={{
-                    background: 'rgba(34, 197, 94, 0.15)',
-                    borderColor: 'rgba(34, 197, 94, 0.4)',
-                    color: '#86efac'
-                  }}
-                >
-                  <CheckCircle2 size={26} />
-                </div>
-                <div>
-                  <p className="chatbot-confirm-title">
-                    Mark this complaint as resolved?
-                  </p>
-                  <p className="chatbot-confirm-desc">
-                    &quot;{complaintToResolve.title}&quot; will be marked as resolved and the student will be notified.
-                  </p>
-                </div>
-              </div>
-
-              {/* Optional Remarks on Resolve */}
-              <label className="complaint-field" style={{ margin: '14px 0 6px', textAlign: 'left' }}>
-                <span>Final Department Remarks (Optional)</span>
-                <textarea
-                  disabled={resolving}
-                  onChange={(e) => setResolvingRemarks(e.target.value)}
-                  placeholder="Explain how the issue was resolved..."
-                  rows={3}
-                  value={resolvingRemarks}
-                />
-              </label>
-
-              <div className="chatbot-confirm-actions">
-                <button
-                  className="complaint-secondary-button"
-                  disabled={resolving}
-                  onClick={() => setResolveModalOpen(false)}
-                  type="button"
-                >
-                  Cancel
-                </button>
-                <button
-                  className="complaint-submit-button"
-                  disabled={resolving}
-                  onClick={handleConfirmResolve}
-                  type="button"
-                >
-                  {resolving ? 'Resolving...' : 'Mark Resolved'}
                 </button>
               </div>
             </motion.div>

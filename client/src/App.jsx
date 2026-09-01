@@ -12,6 +12,8 @@ import ManageNotices from './pages/admin/ManageNotices';
 import ManageUsers from './pages/admin/ManageUsers';
 import DepartmentComplaints from './pages/department/DepartmentComplaints';
 import DepartmentDashboard from './pages/department/DepartmentDashboard';
+import DepartmentRemarks from './pages/department/DepartmentRemarks';
+import DepartmentStatus from './pages/department/DepartmentStatus';
 import NotFoundPage from './pages/public/NotFoundPage';
 import Chatbot from './pages/student/Chatbot';
 import Events from './pages/student/Events';
@@ -51,8 +53,8 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['department']} />}>
             <Route path="/department/dashboard" element={<DepartmentDashboard />} />
             <Route path="/department/complaints" element={<DepartmentComplaints />} />
-            <Route path="/department/status" element={<DepartmentComplaints />} />
-            <Route path="/department/remarks" element={<DepartmentComplaints />} />
+            <Route path="/department/status" element={<DepartmentStatus />} />
+            <Route path="/department/remarks" element={<DepartmentRemarks />} />
           </Route>
         </Route>
 
