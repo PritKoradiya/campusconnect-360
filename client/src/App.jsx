@@ -6,6 +6,7 @@ import RegisterPage from './pages/auth/RegisterPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Departments from './pages/admin/Departments';
 import ManageComplaints from './pages/admin/ManageComplaints';
+import ManageEvents from './pages/admin/ManageEvents';
 import ManageNotices from './pages/admin/ManageNotices';
 import ManageUsers from './pages/admin/ManageUsers';
 import DepartmentDashboard from './pages/department/DepartmentDashboard';
@@ -42,6 +43,7 @@ function App() {
             <Route path="/admin/departments" element={<Departments />} />
             <Route path="/admin/complaints" element={<ManageComplaints />} />
             <Route path="/admin/notices" element={<ManageNotices />} />
+            <Route path="/admin/events" element={<ManageEvents />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['department']} />}>
             <Route path="/department/dashboard" element={<DepartmentDashboard />} />
