@@ -225,7 +225,8 @@
   font-weight: 750;
 }
 
-.campus-form-group input {
+.campus-form-group input,
+.campus-form-group select {
   width: 100%;
   min-height: 48px;
   padding: 0 14px;
@@ -242,6 +243,7 @@
 }
 
 .campus-form-group input:focus,
+.campus-form-group select:focus,
 .campus-input-with-icon:focus-within {
   border-color: #38bdf8;
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, Eye, EyeOff, Hash, Lock, Mail, Phone, UserRound } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import loginIllustration from '../../assets/login-illustration.png';
 import logo from '../../assets/logo.png';
 import { getDashboardPath, useAuth } from '../../context/AuthContext';
+import { getDepartments } from '../../services/departmentService';
 import '../../styles/auth.css';
 
 const roles = ['student', 'admin', 'department'];
@@ -23,11 +24,31 @@ function RegisterPage() {
     semester: '',
     department: ''
   });
+  const [availableDepartments, setAvailableDepartments] = useState([]);
+  const [deptLoading, setDeptLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (formData.role === 'department' && availableDepartments.length === 0) {
+      const fetchDepts = async () => {
+        try {
+          setDeptLoading(true);
+          const response = await getDepartments();
+          setAvailableDepartments(response.data?.departments || []);
+        } catch (err) {
+          console.log('Could not fetch departments for register:', err);
+        } finally {
+          setDeptLoading(false);
+        }
+      };
+
+      fetchDepts();
+    }
+  }, [formData.role, availableDepartments.length]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -262,14 +283,34 @@ function RegisterPage() {
 
             <div className="campus-form-group campus-form-grid-full">
               <label htmlFor="department">Department</label>
-              <input
-                id="department"
-                name="department"
-                onChange={handleChange}
-                placeholder="Maintenance, Computer, Library"
-                type="text"
-                value={formData.department}
-              />
+              {formData.role === 'department' && availableDepartments.length > 0 ? (
+                <select
+                  id="department"
+                  name="department"
+                  onChange={handleChange}
+                  value={formData.department}
+                >
+                  <option value="">Select Department</option>
+                  {availableDepartments.map((dept) => (
+                    <option key={dept._id} value={dept.name}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  id="department"
+                  name="department"
+                  onChange={handleChange}
+                  placeholder={
+                    formData.role === 'department' && deptLoading
+                      ? 'Loading departments...'
+                      : 'Maintenance, Computer, Library'
+                  }
+                  type="text"
+                  value={formData.department}
+                />
+              )}
             </div>
           </div>
 

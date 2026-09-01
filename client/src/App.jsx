@@ -4,6 +4,7 @@ import MainLayout from './layouts/MainLayout';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import Departments from './pages/admin/Departments';
 import ManageComplaints from './pages/admin/ManageComplaints';
 import DepartmentDashboard from './pages/department/DepartmentDashboard';
 import NotFoundPage from './pages/public/NotFoundPage';
@@ -35,6 +36,7 @@ function App() {
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/departments" element={<Departments />} />
             <Route path="/admin/complaints" element={<ManageComplaints />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['department']} />}>
