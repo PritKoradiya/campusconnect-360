@@ -9,6 +9,7 @@ import ManageComplaints from './pages/admin/ManageComplaints';
 import ManageEvents from './pages/admin/ManageEvents';
 import ManageNotices from './pages/admin/ManageNotices';
 import ManageUsers from './pages/admin/ManageUsers';
+import DepartmentComplaints from './pages/department/DepartmentComplaints';
 import DepartmentDashboard from './pages/department/DepartmentDashboard';
 import NotFoundPage from './pages/public/NotFoundPage';
 import Chatbot from './pages/student/Chatbot';
@@ -47,6 +48,7 @@ function App() {
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['department']} />}>
             <Route path="/department/dashboard" element={<DepartmentDashboard />} />
+            <Route path="/department/complaints" element={<DepartmentComplaints />} />
           </Route>
         </Route>
 

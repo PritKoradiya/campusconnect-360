@@ -13,12 +13,16 @@ const isDepartmentUserAssigned = (user, complaint) => {
   }
 
   const department = complaint.department;
-  const userDepartment = user.department.toString().toLowerCase();
+  const userDepartment = user.department.toString().trim().toLowerCase();
+
+  if (typeof department === 'string') {
+    return department.trim().toLowerCase() === userDepartment;
+  }
 
   return (
-    department._id?.toString().toLowerCase() === userDepartment ||
-    department.name?.toLowerCase() === userDepartment ||
-    department.code?.toLowerCase() === userDepartment
+    department._id?.toString().trim().toLowerCase() === userDepartment ||
+    department.name?.trim().toLowerCase() === userDepartment ||
+    department.code?.trim().toLowerCase() === userDepartment
   );
 };
 
@@ -110,14 +114,26 @@ const getMyComplaints = async (req, res) => {
 
 const getAllComplaints = async (req, res) => {
   try {
-    const complaints = await Complaint.find()
+    let complaints = await Complaint.find()
       .populate('student', 'name enrollmentNo email')
       .populate('department', 'name code')
       .sort({ createdAt: -1 });
 
+    if (req.user.role === 'department') {
+      if (!req.user.department) {
+        complaints = [];
+      } else {
+        complaints = complaints.filter((complaint) =>
+          isDepartmentUserAssigned(req.user, complaint)
+        );
+      }
+    }
+
     return res.status(200).json({
       success: true,
-      message: 'All complaints fetched successfully',
+      message: req.user.role === 'department'
+        ? 'Assigned complaints fetched successfully'
+        : 'All complaints fetched successfully',
       count: complaints.length,
       complaints
     });

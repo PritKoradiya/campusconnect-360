@@ -11,3 +11,12 @@ export const getMyComplaints = () => {
 export const getComplaintById = (id) => {
   return api.get(`/complaints/${id}`);
 };
+
+export const getDepartmentComplaints = () => {
+  return api.get('/complaints');
+};
+
+export const updateDepartmentComplaintStatus = (id, data) => {
+  return api.put(`/complaints/${id}/status`, data);
+};
+

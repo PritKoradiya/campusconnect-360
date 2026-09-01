@@ -1,0 +1,1053 @@
+import { useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  AlertCircle,
+  Building2,
+  CheckCircle2,
+  ClipboardList,
+  Clock3,
+  Edit3,
+  Eye,
+  MessageSquareText,
+  RotateCcw,
+  Search,
+  Timer,
+  User,
+  X,
+  XCircle
+} from 'lucide-react';
+import AnimatedCard from '../../components/ui/AnimatedCard';
+import AnimatedPage from '../../components/ui/AnimatedPage';
+import { useAuth } from '../../context/AuthContext';
+import {
+  getComplaintById,
+  getDepartmentComplaints,
+  updateDepartmentComplaintStatus
+} from '../../services/complaintService';
+
+const statusFilterOptions = ['All', 'Pending', 'In Progress', 'Resolved', 'Rejected'];
+const priorityFilterOptions = ['All', 'Low', 'Medium', 'High', 'Urgent'];
+const allowedUpdateStatuses = ['Pending', 'In Progress', 'Resolved'];
+
+function formatDate(dateValue) {
+  if (!dateValue) return 'Not available';
+  try {
+    const d = new Date(dateValue);
+    return isNaN(d.getTime()) ? 'Not available' : d.toLocaleDateString();
+  } catch {
+    return 'Not available';
+  }
+}
+
+function getPriorityBadgeClass(priority) {
+  const p = (priority || 'Low').toLowerCase();
+  if (p === 'urgent') return 'track-badge status-rejected';
+  if (p === 'high') return 'track-badge priority-high';
+  if (p === 'medium') return 'track-badge priority-medium';
+  return 'track-badge priority-low';
+}
+
+function getStatusBadgeClass(status) {
+  const s = (status || 'Pending').toLowerCase();
+  if (s === 'resolved') return 'track-badge status-resolved';
+  if (s === 'in progress') return 'track-badge status-in-progress';
+  if (s === 'rejected') return 'track-badge status-rejected';
+  return 'track-badge status-pending';
+}
+
+function getStudentName(complaint) {
+  return complaint?.student?.name || complaint?.studentName || complaint?.user?.name || 'Student';
+}
+
+function getStudentEnrollment(complaint) {
+  return complaint?.student?.enrollmentNo || complaint?.enrollmentNo || '';
+}
+
+function getDepartmentName(complaint) {
+  if (complaint?.department && typeof complaint.department === 'object') {
+    return complaint.department.name || 'Assigned Department';
+  }
+  return complaint?.department || 'Assigned Department';
+}
+
+function getComplaintList(responseData) {
+  if (Array.isArray(responseData)) return responseData;
+  if (Array.isArray(responseData?.complaints)) return responseData.complaints;
+  if (Array.isArray(responseData?.data)) return responseData.data;
+  return [];
+}
+
+function getComplaintDetails(responseData) {
+  return responseData?.complaint || responseData?.data || responseData;
+}
+
+function DepartmentComplaints() {
+  const { user } = useAuth();
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Filters, Search & Sort
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [priorityFilter, setPriorityFilter] = useState('All');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('newest');
+
+  // View Details Modal State
+  const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
+
+  // Update Status & Remarks Modal State
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [complaintToUpdate, setComplaintToUpdate] = useState(null);
+  const [newStatus, setNewStatus] = useState('In Progress');
+  const [deptRemarks, setDeptRemarks] = useState('');
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState('');
+
+  // Resolve Confirmation Modal State
+  const [resolveModalOpen, setResolveModalOpen] = useState(false);
+  const [complaintToResolve, setComplaintToResolve] = useState(null);
+  const [resolvingRemarks, setResolvingRemarks] = useState('');
+  const [resolving, setResolving] = useState(false);
+
+  const fetchComplaints = async (isManualRefresh = false) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Session expired. Please login again.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (isManualRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError('');
+
+      const response = await getDepartmentComplaints();
+      setComplaints(getComplaintList(response.data));
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setError('Session expired. Please login again.');
+      } else if (err.response?.status === 403) {
+        setError('You are not authorized to access department complaints.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to load assigned complaints');
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchComplaints();
+  }, []);
+
+  // Dynamically derive categories from loaded complaints
+  const derivedCategories = useMemo(() => {
+    const cats = new Set();
+    complaints.forEach((c) => {
+      if (c.category && typeof c.category === 'string' && c.category.trim()) {
+        cats.add(c.category.trim());
+      }
+    });
+    return ['All', ...Array.from(cats).sort()];
+  }, [complaints]);
+
+  // Real Summary Counts
+  const totalAssigned = complaints.length;
+  const pendingCount = complaints.filter((c) => (c.status || '').toLowerCase() === 'pending').length;
+  const inProgressCount = complaints.filter((c) => (c.status || '').toLowerCase() === 'in progress').length;
+  const resolvedCount = complaints.filter((c) => (c.status || '').toLowerCase() === 'resolved').length;
+
+  // Filtered and Sorted Complaints
+  const filteredComplaints = useMemo(() => {
+    return complaints
+      .filter((complaint) => {
+        const title = (complaint.title || '').toLowerCase();
+        const description = (complaint.description || '').toLowerCase();
+        const student = getStudentName(complaint).toLowerCase();
+        const enrollment = getStudentEnrollment(complaint).toLowerCase();
+        const category = (complaint.category || '').toLowerCase();
+        const priority = (complaint.priority || '').toLowerCase();
+        const status = (complaint.status || '').toLowerCase();
+        const query = searchText.toLowerCase().trim();
+
+        const matchesSearch =
+          !query ||
+          title.includes(query) ||
+          description.includes(query) ||
+          student.includes(query) ||
+          enrollment.includes(query) ||
+          category.includes(query) ||
+          priority.includes(query);
+
+        const matchesStatus =
+          statusFilter === 'All' || status === statusFilter.toLowerCase();
+
+        const matchesPriority =
+          priorityFilter === 'All' || priority === priorityFilter.toLowerCase();
+
+        const matchesCategory =
+          categoryFilter === 'All' ||
+          (complaint.category && complaint.category.trim() === categoryFilter);
+
+        return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'oldest') {
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        }
+        if (sortBy === 'priority') {
+          const priorityWeights = { Urgent: 4, High: 3, Medium: 2, Low: 1 };
+          return (priorityWeights[b.priority] || 0) - (priorityWeights[a.priority] || 0);
+        }
+        // Default: newest first
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      });
+  }, [complaints, searchText, statusFilter, priorityFilter, categoryFilter, sortBy]);
+
+  // View Details Handler
+  const handleViewDetails = async (complaint) => {
+    const id = complaint._id || complaint.id;
+    if (!id) {
+      setSelectedComplaint(complaint);
+      return;
+    }
+
+    try {
+      setModalLoading(true);
+      setSelectedComplaint(complaint);
+      setError('');
+
+      const response = await getComplaintById(id);
+      const details = getComplaintDetails(response.data);
+      setSelectedComplaint(details);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setError('Session expired. Please login again.');
+      } else if (err.response?.status === 403) {
+        setError('You are not authorized to view this complaint.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to load complaint details');
+      }
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Open Update Status & Remarks Modal
+  const openUpdateModal = (complaint) => {
+    setComplaintToUpdate(complaint);
+    setNewStatus(complaint.status || 'In Progress');
+    setDeptRemarks(complaint.departmentRemarks || '');
+    setUpdateError('');
+    setUpdateModalOpen(true);
+  };
+
+  // Submit Status & Remarks Update
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    if (!complaintToUpdate) return;
+    const id = complaintToUpdate._id || complaintToUpdate.id;
+    if (!id) return;
+
+    try {
+      setUpdating(true);
+      setUpdateError('');
+      setError('');
+      setSuccess('');
+
+      const payload = {
+        status: newStatus,
+        departmentRemarks: deptRemarks.trim()
+      };
+
+      const response = await updateDepartmentComplaintStatus(id, payload);
+      const updated = response.data?.complaint || { ...complaintToUpdate, ...payload };
+
+      setComplaints((prev) =>
+        prev.map((c) => ((c._id || c.id) === id ? { ...c, ...updated } : c))
+      );
+
+      if (selectedComplaint && (selectedComplaint._id || selectedComplaint.id) === id) {
+        setSelectedComplaint((prev) => ({ ...prev, ...updated }));
+      }
+
+      setUpdateModalOpen(false);
+      setComplaintToUpdate(null);
+      setSuccess('Complaint status & department remarks updated successfully.');
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setUpdateError('Session expired. Please login again.');
+      } else if (err.response?.status === 403) {
+        setUpdateError('You are not authorized to manage this complaint.');
+      } else {
+        setUpdateError(err.response?.data?.message || 'Failed to update complaint.');
+      }
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Open Resolve Confirmation Modal
+  const openResolveModal = (complaint) => {
+    setComplaintToResolve(complaint);
+    setResolvingRemarks(complaint.departmentRemarks || '');
+    setResolveModalOpen(true);
+  };
+
+  // Confirm Resolve Complaint
+  const handleConfirmResolve = async () => {
+    if (!complaintToResolve) return;
+    const id = complaintToResolve._id || complaintToResolve.id;
+    if (!id) return;
+
+    try {
+      setResolving(true);
+      setError('');
+      setSuccess('');
+
+      const payload = {
+        status: 'Resolved',
+        departmentRemarks: resolvingRemarks.trim()
+      };
+
+      const response = await updateDepartmentComplaintStatus(id, payload);
+      const updated = response.data?.complaint || {
+        ...complaintToResolve,
+        ...payload,
+        resolvedAt: new Date()
+      };
+
+      setComplaints((prev) =>
+        prev.map((c) => ((c._id || c.id) === id ? { ...c, ...updated } : c))
+      );
+
+      if (selectedComplaint && (selectedComplaint._id || selectedComplaint.id) === id) {
+        setSelectedComplaint((prev) => ({ ...prev, ...updated }));
+      }
+
+      setResolveModalOpen(false);
+      setComplaintToResolve(null);
+      setSuccess('Complaint marked as resolved.');
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setError('Session expired. Please login again.');
+      } else if (err.response?.status === 403) {
+        setError('You are not authorized to manage this complaint.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to resolve complaint.');
+      }
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  return (
+    <AnimatedPage>
+      {/* Hero Header */}
+      <AnimatedCard className="dashboard-hero" delay={0.05} hover={false}>
+        <div>
+          <p className="dashboard-kicker">Department Desk</p>
+          <h1>Assigned Complaints</h1>
+          <p>Review, investigate, and resolve grievances assigned to your department.</p>
+        </div>
+        <div className="admin-header-actions">
+          <button
+            className="admin-refresh-btn"
+            disabled={refreshing || loading}
+            onClick={() => fetchComplaints(true)}
+            title="Refresh assigned complaints"
+            type="button"
+          >
+            <motion.span
+              animate={refreshing ? { rotate: 360 } : { rotate: 0 }}
+              style={{ display: 'inline-flex' }}
+              transition={{ repeat: refreshing ? Infinity : 0, duration: 1, ease: 'linear' }}
+            >
+              <RotateCcw size={16} />
+            </motion.span>
+            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+          <span className="dashboard-role-pill">
+            <Building2 size={13} style={{ display: 'inline', marginRight: '4px' }} />
+            {user?.department ? `${user.department}` : 'Department User'}
+          </span>
+        </div>
+      </AnimatedCard>
+
+      {/* Summary Cards */}
+      <div className="dashboard-grid dashboard-summary-grid">
+        <AnimatedCard className="dashboard-stat-card tone-blue" delay={0.08}>
+          <span className="dashboard-card-icon">
+            <ClipboardList size={22} />
+          </span>
+          <div>
+            <p>Assigned Complaints</p>
+            <strong>{totalAssigned}</strong>
+          </div>
+        </AnimatedCard>
+
+        <AnimatedCard className="dashboard-stat-card tone-warning" delay={0.12}>
+          <span className="dashboard-card-icon">
+            <Clock3 size={22} />
+          </span>
+          <div>
+            <p>Pending</p>
+            <strong>{pendingCount}</strong>
+          </div>
+        </AnimatedCard>
+
+        <AnimatedCard className="dashboard-stat-card tone-cyan" delay={0.16}>
+          <span className="dashboard-card-icon">
+            <Timer size={22} />
+          </span>
+          <div>
+            <p>In Progress</p>
+            <strong>{inProgressCount}</strong>
+          </div>
+        </AnimatedCard>
+
+        <AnimatedCard className="dashboard-stat-card tone-success" delay={0.2}>
+          <span className="dashboard-card-icon">
+            <CheckCircle2 size={22} />
+          </span>
+          <div>
+            <p>Resolved</p>
+            <strong>{resolvedCount}</strong>
+          </div>
+        </AnimatedCard>
+      </div>
+
+      {/* Filter and Search Section */}
+      <AnimatedCard className="track-filter-card admin-complaints-filter-card" delay={0.24} hover={false}>
+        {/* Search Field */}
+        <label className="complaint-field admin-filter-field-search">
+          <span>Search Complaints</span>
+          <div className="track-search-box">
+            <Search size={18} />
+            <input
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Search by title, student, category, priority..."
+              type="text"
+              value={searchText}
+            />
+          </div>
+        </label>
+
+        {/* Status Filter */}
+        <label className="complaint-field">
+          <span>Status</span>
+          <select onChange={(e) => setStatusFilter(e.target.value)} value={statusFilter}>
+            {statusFilterOptions.map((status) => (
+              <option key={status} value={status}>
+                {status === 'All' ? 'All Statuses' : status}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {/* Priority Filter */}
+        <label className="complaint-field">
+          <span>Priority</span>
+          <select onChange={(e) => setPriorityFilter(e.target.value)} value={priorityFilter}>
+            {priorityFilterOptions.map((priority) => (
+              <option key={priority} value={priority}>
+                {priority === 'All' ? 'All Priorities' : priority}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {/* Category Filter */}
+        <label className="complaint-field">
+          <span>Category</span>
+          <select onChange={(e) => setCategoryFilter(e.target.value)} value={categoryFilter}>
+            {derivedCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat === 'All' ? 'All Categories' : cat}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {/* Sorting */}
+        <label className="complaint-field">
+          <span>Sort By</span>
+          <select onChange={(e) => setSortBy(e.target.value)} value={sortBy}>
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="priority">Priority (High to Low)</option>
+          </select>
+        </label>
+      </AnimatedCard>
+
+      {/* Global Alerts */}
+      <AnimatePresence>
+        {success && (
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            className="chatbot-alert chatbot-alert-success"
+            exit={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -10 }}
+          >
+            <CheckCircle2 size={18} />
+            <span>{success}</span>
+            <button className="chatbot-alert-close" onClick={() => setSuccess('')} type="button">
+              <X size={15} />
+            </button>
+          </motion.div>
+        )}
+
+        {error && (
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            className="chatbot-alert chatbot-alert-error"
+            exit={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -10 }}
+          >
+            <AlertCircle size={18} />
+            <span>{error}</span>
+            <button className="chatbot-alert-close" onClick={() => setError('')} type="button">
+              <X size={15} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Complaints Table Panel */}
+      <AnimatedCard className="dashboard-panel" delay={0.28} hover={false}>
+        <div className="dashboard-section-heading">
+          <h2>Assigned Worklist ({filteredComplaints.length})</h2>
+          <p>Direct service queue for complaints routed to {user?.department || 'your department'}.</p>
+        </div>
+
+        {/* Loading Skeletons */}
+        {loading && (
+          <div className="track-table-wrap">
+            <table className="track-table">
+              <thead>
+                <tr>
+                  <th>Complaint ID</th>
+                  <th>Student</th>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Priority</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3, 4].map((item) => (
+                  <tr key={item}>
+                    <td><div className="admin-skeleton-line" style={{ width: '70px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '110px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '160px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '90px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '75px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '80px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '85px' }} /></td>
+                    <td><div className="admin-skeleton-line" style={{ width: '130px' }} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Empty State: No Complaints */}
+        {!loading && complaints.length === 0 && (
+          <div className="track-empty-state">
+            <CheckCircle2 size={36} style={{ color: '#22d3ee', margin: '0 auto 10px' }} />
+            <p style={{ margin: 0, fontWeight: 750, color: '#e0f2fe' }}>
+              No complaints are currently assigned to your department.
+            </p>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#94a3b8' }}>
+              New student requests routed to your department will appear here automatically.
+            </p>
+          </div>
+        )}
+
+        {/* Empty State: Filter produced 0 */}
+        {!loading && complaints.length > 0 && filteredComplaints.length === 0 && (
+          <div className="track-empty-state">
+            <Search size={36} style={{ color: '#fbbf24', margin: '0 auto 10px' }} />
+            <p style={{ margin: 0, fontWeight: 750, color: '#e0f2fe' }}>
+              No complaints match your current filters.
+            </p>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#94a3b8' }}>
+              Try adjusting your search criteria or resetting filters.
+            </p>
+          </div>
+        )}
+
+        {/* Populated Table */}
+        {!loading && filteredComplaints.length > 0 && (
+          <div className="track-table-wrap">
+            <table className="track-table">
+              <thead>
+                <tr>
+                  <th>Complaint ID</th>
+                  <th>Student</th>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Priority</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredComplaints.map((item) => {
+                  const id = item._id || item.id || '';
+                  const shortId = id.length > 6 ? `#${id.slice(-6).toUpperCase()}` : id;
+                  const isResolved = (item.status || '').toLowerCase() === 'resolved';
+
+                  return (
+                    <motion.tr
+                      animate={{ opacity: 1, y: 0 }}
+                      initial={{ opacity: 0, y: 6 }}
+                      key={id}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <td>
+                        <span className="admin-complaint-id">{shortId}</span>
+                      </td>
+                      <td>
+                        <div className="admin-student-cell">
+                          <strong>{getStudentName(item)}</strong>
+                          {getStudentEnrollment(item) && (
+                            <span className="admin-student-enrollment">
+                              {getStudentEnrollment(item)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="admin-notice-title-cell">
+                          <strong>{item.title || 'Untitled Complaint'}</strong>
+                          <span className="admin-notice-desc-preview">
+                            {item.description || 'No description provided.'}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ color: '#cbd5e1' }}>{item.category || 'General'}</span>
+                      </td>
+                      <td>
+                        <span className={getPriorityBadgeClass(item.priority)}>
+                          {item.priority || 'Low'}
+                        </span>
+                      </td>
+                      <td>{formatDate(item.createdAt)}</td>
+                      <td>
+                        <span className={getStatusBadgeClass(item.status)}>
+                          {item.status || 'Pending'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="admin-action-btn-group">
+                          {/* View Details */}
+                          <button
+                            className="admin-action-btn view"
+                            onClick={() => handleViewDetails(item)}
+                            title="View complaint details"
+                            type="button"
+                          >
+                            <Eye size={14} />
+                            <span>View</span>
+                          </button>
+
+                          {/* Update Status & Remarks */}
+                          <button
+                            className="admin-action-btn assign"
+                            onClick={() => openUpdateModal(item)}
+                            title="Update status & department remarks"
+                            type="button"
+                          >
+                            <Edit3 size={14} />
+                            <span>Update</span>
+                          </button>
+
+                          {/* Quick Resolve Button */}
+                          {!isResolved && (
+                            <button
+                              className="admin-action-btn toggle-inactive"
+                              onClick={() => openResolveModal(item)}
+                              title="Mark complaint as resolved"
+                              type="button"
+                            >
+                              <CheckCircle2 size={14} />
+                              <span>Resolve</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </AnimatedCard>
+
+      {/* 1. View Complaint Details Modal */}
+      <AnimatePresence>
+        {selectedComplaint && (
+          <motion.div
+            animate={{ opacity: 1 }}
+            className="track-modal-backdrop"
+            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="track-modal-card admin-details-modal-card"
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              style={{ maxWidth: '680px' }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              {/* Modal Header */}
+              <div className="track-modal-heading">
+                <div>
+                  <p className="dashboard-kicker">Grievance Record</p>
+                  <h2>{selectedComplaint.title || 'Untitled Complaint'}</h2>
+                </div>
+                <button
+                  aria-label="Close modal"
+                  className="track-close-button"
+                  onClick={() => setSelectedComplaint(null)}
+                  type="button"
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              {modalLoading && (
+                <div className="track-empty-state" style={{ margin: '14px 0' }}>
+                  <div className="chatbot-loading-spinner" style={{ margin: '8px auto' }} />
+                  Loading latest complaint record...
+                </div>
+              )}
+
+              {/* Optional Complaint Image */}
+              {selectedComplaint.imageUrl && (
+                <img
+                  alt="Complaint attachment"
+                  className="event-modal-hero-image"
+                  src={selectedComplaint.imageUrl}
+                />
+              )}
+
+              {/* Detail Grid */}
+              <div className="track-detail-grid admin-detail-grid">
+                <p>
+                  <span>Student Name</span>
+                  {getStudentName(selectedComplaint)}
+                </p>
+                <p>
+                  <span>Enrollment Number</span>
+                  {getStudentEnrollment(selectedComplaint) || 'Not provided'}
+                </p>
+                <p>
+                  <span>Category</span>
+                  {selectedComplaint.category || 'General'}
+                </p>
+                <p>
+                  <span>Priority</span>
+                  <span className={getPriorityBadgeClass(selectedComplaint.priority)} style={{ width: 'fit-content' }}>
+                    {selectedComplaint.priority || 'Low'}
+                  </span>
+                </p>
+                <p>
+                  <span>Current Status</span>
+                  <span className={getStatusBadgeClass(selectedComplaint.status)} style={{ width: 'fit-content' }}>
+                    {selectedComplaint.status || 'Pending'}
+                  </span>
+                </p>
+                <p>
+                  <span>Assigned Department</span>
+                  {getDepartmentName(selectedComplaint)}
+                </p>
+                <p>
+                  <span>Submitted Date</span>
+                  {formatDate(selectedComplaint.createdAt)}
+                </p>
+                {selectedComplaint.resolvedAt && (
+                  <p>
+                    <span>Resolved Date</span>
+                    {formatDate(selectedComplaint.resolvedAt)}
+                  </p>
+                )}
+                <p className="admin-detail-fullwidth">
+                  <span>Full Description</span>
+                  <span style={{ whiteSpace: 'pre-wrap', color: '#e2e8f0', lineHeight: 1.6 }}>
+                    {selectedComplaint.description || 'No description provided.'}
+                  </span>
+                </p>
+                {selectedComplaint.adminRemarks && (
+                  <p className="admin-detail-fullwidth">
+                    <span>Admin Remarks</span>
+                    <span style={{ color: '#93c5fd', fontStyle: 'italic' }}>
+                      {selectedComplaint.adminRemarks}
+                    </span>
+                  </p>
+                )}
+                {selectedComplaint.departmentRemarks && (
+                  <p className="admin-detail-fullwidth">
+                    <span>Department Remarks</span>
+                    <span style={{ color: '#86efac', fontStyle: 'italic' }}>
+                      {selectedComplaint.departmentRemarks}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              {/* Modal Footer Controls */}
+              <div className="admin-modal-footer">
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className="admin-action-btn assign"
+                    onClick={() => {
+                      const obj = selectedComplaint;
+                      setSelectedComplaint(null);
+                      openUpdateModal(obj);
+                    }}
+                    style={{ minHeight: '38px', padding: '0 14px' }}
+                    type="button"
+                  >
+                    <Edit3 size={15} />
+                    <span>Update Status / Remarks</span>
+                  </button>
+
+                  {(selectedComplaint.status || '').toLowerCase() !== 'resolved' && (
+                    <button
+                      className="admin-action-btn toggle-inactive"
+                      onClick={() => {
+                        const obj = selectedComplaint;
+                        setSelectedComplaint(null);
+                        openResolveModal(obj);
+                      }}
+                      style={{ minHeight: '38px', padding: '0 14px' }}
+                      type="button"
+                    >
+                      <CheckCircle2 size={15} />
+                      <span>Mark Resolved</span>
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  className="complaint-secondary-button"
+                  onClick={() => setSelectedComplaint(null)}
+                  type="button"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 2. Update Status & Remarks Modal */}
+      <AnimatePresence>
+        {updateModalOpen && complaintToUpdate && (
+          <motion.div
+            animate={{ opacity: 1 }}
+            className="track-modal-backdrop"
+            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="track-modal-card admin-details-modal-card"
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              style={{ maxWidth: '580px' }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <div className="track-modal-heading">
+                <div>
+                  <p className="dashboard-kicker">Department Action</p>
+                  <h2>Update Status & Remarks</h2>
+                </div>
+                <button
+                  aria-label="Close modal"
+                  className="track-close-button"
+                  onClick={() => setUpdateModalOpen(false)}
+                  type="button"
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              {updateError && (
+                <div className="chatbot-alert chatbot-alert-error" style={{ margin: '14px 0 6px' }}>
+                  <AlertCircle size={17} />
+                  <span>{updateError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleUpdateSubmit} style={{ marginTop: '16px' }}>
+                <p style={{ margin: '0 0 14px', fontSize: '13.5px', color: '#94a3b8' }}>
+                  Updating complaint: <strong style={{ color: '#e0f2fe' }}>{complaintToUpdate.title}</strong>
+                </p>
+
+                {/* Status Dropdown */}
+                <label className="complaint-field">
+                  <span>Complaint Status *</span>
+                  <select
+                    disabled={updating}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    value={newStatus}
+                  >
+                    {allowedUpdateStatuses.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {/* Department Remarks */}
+                <label className="complaint-field" style={{ marginTop: '14px' }}>
+                  <span>Department Remarks</span>
+                  <textarea
+                    disabled={updating}
+                    onChange={(e) => setDeptRemarks(e.target.value)}
+                    placeholder="Enter notes on investigation, steps taken, or resolution details for the student..."
+                    rows={4}
+                    value={deptRemarks}
+                  />
+                </label>
+
+                <div className="chatbot-confirm-actions" style={{ marginTop: '20px' }}>
+                  <button
+                    className="complaint-secondary-button"
+                    disabled={updating}
+                    onClick={() => setUpdateModalOpen(false)}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="complaint-submit-button"
+                    disabled={updating}
+                    type="submit"
+                  >
+                    {updating ? 'Saving Changes...' : 'Save Updates'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 3. Resolve Confirmation Modal */}
+      <AnimatePresence>
+        {resolveModalOpen && complaintToResolve && (
+          <motion.div
+            animate={{ opacity: 1 }}
+            className="track-modal-backdrop"
+            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="track-modal-card chatbot-confirm-modal"
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              style={{ maxWidth: '520px' }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <div className="track-modal-heading">
+                <div>
+                  <p className="dashboard-kicker">Confirmation</p>
+                  <h2>Resolve Complaint</h2>
+                </div>
+                <button
+                  aria-label="Close modal"
+                  className="track-close-button"
+                  onClick={() => setResolveModalOpen(false)}
+                  type="button"
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              <div className="chatbot-confirm-body">
+                <div
+                  className="chatbot-confirm-icon-wrap"
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    borderColor: 'rgba(34, 197, 94, 0.4)',
+                    color: '#86efac'
+                  }}
+                >
+                  <CheckCircle2 size={26} />
+                </div>
+                <div>
+                  <p className="chatbot-confirm-title">
+                    Mark this complaint as resolved?
+                  </p>
+                  <p className="chatbot-confirm-desc">
+                    &quot;{complaintToResolve.title}&quot; will be marked as resolved and the student will be notified.
+                  </p>
+                </div>
+              </div>
+
+              {/* Optional Remarks on Resolve */}
+              <label className="complaint-field" style={{ margin: '14px 0 6px', textAlign: 'left' }}>
+                <span>Final Department Remarks (Optional)</span>
+                <textarea
+                  disabled={resolving}
+                  onChange={(e) => setResolvingRemarks(e.target.value)}
+                  placeholder="Explain how the issue was resolved..."
+                  rows={3}
+                  value={resolvingRemarks}
+                />
+              </label>
+
+              <div className="chatbot-confirm-actions">
+                <button
+                  className="complaint-secondary-button"
+                  disabled={resolving}
+                  onClick={() => setResolveModalOpen(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="complaint-submit-button"
+                  disabled={resolving}
+                  onClick={handleConfirmResolve}
+                  type="button"
+                >
+                  {resolving ? 'Resolving...' : 'Mark Resolved'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </AnimatedPage>
+  );
+}
+
+export default DepartmentComplaints;
