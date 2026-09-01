@@ -12,6 +12,7 @@ const lostFoundRoutes = require('./routes/lostFoundRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const userRoutes = require('./routes/userRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/lost-found', lostFoundRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({

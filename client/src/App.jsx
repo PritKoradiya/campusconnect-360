@@ -4,6 +4,7 @@ import MainLayout from './layouts/MainLayout';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminReports from './pages/admin/AdminReports';
 import Departments from './pages/admin/Departments';
 import ManageComplaints from './pages/admin/ManageComplaints';
 import ManageEvents from './pages/admin/ManageEvents';
@@ -45,6 +46,7 @@ function App() {
             <Route path="/admin/complaints" element={<ManageComplaints />} />
             <Route path="/admin/notices" element={<ManageNotices />} />
             <Route path="/admin/events" element={<ManageEvents />} />
+            <Route path="/admin/reports" element={<AdminReports />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['department']} />}>
             <Route path="/department/dashboard" element={<DepartmentDashboard />} />
