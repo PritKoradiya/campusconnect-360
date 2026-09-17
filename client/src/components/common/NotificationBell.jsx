@@ -20,13 +20,8 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { connectSocket, disconnectSocket, offNotification, onNotification } from '../../services/socket';
-import {
-  getNotifications,
-  getUnreadCount,
-  markAllNotificationsAsRead,
-  markNotificationAsRead
-} from '../../services/notificationService';
+import { useNotifications } from '../../context/NotificationContext';
+import { getNotifications } from '../../services/notificationService';
 
 const getTypeIcon = (type) => {
   switch (type) {
@@ -77,79 +72,56 @@ function NotificationBell() {
   const { user, token } = useAuth();
   const navigate = useNavigate();
 
-  const [unreadCount, setUnreadCount] = useState(0);
+  const {
+    unreadCount,
+    isBellAnimating,
+    isMarkingAll,
+    latestNewNotification,
+    lastReadNotificationId,
+    allMarkedReadAt,
+    markAsRead,
+    markAllAsRead
+  } = useNotifications();
+
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(false);
-  const [isMarkingAll, setIsMarkingAll] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
   const [highlightedId, setHighlightedId] = useState(null);
 
   const containerRef = useRef(null);
 
-  // Fetch initial unread count on mount or when token/user changes
+  // Synchronize when a new real-time notification is received
   useEffect(() => {
-    if (!user || !token) {
-      setUnreadCount(0);
-      disconnectSocket();
-      return;
-    }
+    if (!latestNewNotification) return;
 
-    let isMounted = true;
+    setHighlightedId(latestNewNotification._id);
+    const timer = setTimeout(() => setHighlightedId(null), 4000);
 
-    const fetchCount = async () => {
-      try {
-        const data = await getUnreadCount();
-        if (isMounted && typeof data.count === 'number') {
-          setUnreadCount(data.count);
-        }
-      } catch (err) {
-        // Safe fallback; app continues without crashing
+    setNotifications((prev) => {
+      const exists = prev.some((item) => item._id === latestNewNotification._id);
+      if (exists) {
+        return prev.map((item) => (item._id === latestNewNotification._id ? latestNewNotification : item));
       }
-    };
+      return [latestNewNotification, ...prev.slice(0, 6)];
+    });
 
-    fetchCount();
+    return () => clearTimeout(timer);
+  }, [latestNewNotification]);
 
-    // Connect Socket.IO
-    connectSocket(token);
+  // Synchronize when an individual item is marked read anywhere
+  useEffect(() => {
+    if (!lastReadNotificationId) return;
+    setNotifications((prev) =>
+      prev.map((item) => (item._id === lastReadNotificationId ? { ...item, isRead: true } : item))
+    );
+  }, [lastReadNotificationId]);
 
-    const handleNewNotification = (newNotif) => {
-      if (!isMounted) return;
-
-      if (!newNotif.isRead) {
-        setUnreadCount((prev) => prev + 1);
-      }
-
-      // Trigger subtle bell pulse animation
-      setIsAnimating(true);
-      setTimeout(() => {
-        if (isMounted) setIsAnimating(false);
-      }, 900);
-
-      // Highlight new notification item briefly
-      setHighlightedId(newNotif._id);
-      setTimeout(() => {
-        if (isMounted) setHighlightedId(null);
-      }, 4000);
-
-      // Prepend to open preview list without duplicates
-      setNotifications((prev) => {
-        const exists = prev.some((item) => item._id === newNotif._id);
-        if (exists) {
-          return prev.map((item) => (item._id === newNotif._id ? newNotif : item));
-        }
-        return [newNotif, ...prev.slice(0, 6)];
-      });
-    };
-
-    onNotification(handleNewNotification);
-
-    return () => {
-      isMounted = false;
-      offNotification(handleNewNotification);
-    };
-  }, [user, token]);
+  // Synchronize when mark all read occurs anywhere
+  useEffect(() => {
+    if (!allMarkedReadAt) return;
+    setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+  }, [allMarkedReadAt]);
 
   const loadRecent = useCallback(async () => {
     if (!token) return;
@@ -159,9 +131,6 @@ function NotificationBell() {
       const data = await getNotifications({ limit: 7 });
       if (data?.notifications) {
         setNotifications(data.notifications);
-        if (typeof data.unreadCount === 'number') {
-          setUnreadCount(data.unreadCount);
-        }
       }
     } catch (err) {
       setFetchError(true);
@@ -210,30 +179,18 @@ function NotificationBell() {
     e.stopPropagation();
     if (notification.isRead) return;
 
-    try {
-      await markNotificationAsRead(notification._id);
-
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === notification._id ? { ...n, isRead: true } : n))
-      );
-
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (err) {
-      // API error handled safely
-    }
+    await markAsRead(notification._id);
+    setNotifications((prev) =>
+      prev.map((n) => (n._id === notification._id ? { ...n, isRead: true } : n))
+    );
   };
 
   const handleItemClick = async (notification) => {
     if (!notification.isRead) {
-      try {
-        await markNotificationAsRead(notification._id);
-        setNotifications((prev) =>
-          prev.map((n) => (n._id === notification._id ? { ...n, isRead: true } : n))
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      } catch (err) {
-        // Safe fallback
-      }
+      await markAsRead(notification._id);
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === notification._id ? { ...n, isRead: true } : n))
+      );
     }
 
     if (notification.link) {
@@ -244,16 +201,8 @@ function NotificationBell() {
 
   const handleMarkAllRead = async () => {
     if (isMarkingAll || unreadCount === 0) return;
-    setIsMarkingAll(true);
-    try {
-      await markAllNotificationsAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setUnreadCount(0);
-    } catch (err) {
-      // Handled safely
-    } finally {
-      setIsMarkingAll(false);
-    }
+    await markAllAsRead();
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
   const handleViewAll = () => {

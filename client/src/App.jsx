@@ -22,6 +22,7 @@ import MyComplaints from './pages/student/MyComplaints';
 import Notices from './pages/student/Notices';
 import StudentDashboard from './pages/student/StudentDashboard';
 import SubmitComplaint from './pages/student/SubmitComplaint';
+import NotificationsPage from './pages/notifications/NotificationsPage';
 
 function App() {
   return (
@@ -32,6 +33,9 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
 
         <Route element={<MainLayout />}>
+          <Route element={<ProtectedRoute allowedRoles={['student', 'admin', 'department']} />}>
+            <Route path="/notifications" element={<NotificationsPage />} />
+          </Route>
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/submit-complaint" element={<SubmitComplaint />} />
