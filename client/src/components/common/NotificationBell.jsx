@@ -230,7 +230,7 @@ function NotificationBell() {
       >
         <motion.span
           animate={
-            isAnimating
+            isBellAnimating
               ? {
                   rotate: [0, -14, 14, -10, 10, -4, 4, 0],
                   scale: [1, 1.15, 1.1, 1]

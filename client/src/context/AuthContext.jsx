@@ -50,6 +50,7 @@ function AuthProvider({ children }) {
     localStorage.setItem('user', JSON.stringify(authUser));
     setToken(authToken);
     setUser(authUser);
+    setLoading(false);
 
     return authData;
   };
