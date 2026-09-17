@@ -59,8 +59,24 @@ const createNotification = async ({
     expiresAt: expiresAt || null
   });
 
-  // Future Part B integration point:
-  // emitNotificationToUser(recipient, notification);
+  // Emit real-time notification to recipient's private room
+  try {
+    const { emitToUser } = require('../socket');
+    emitToUser(recipient, 'notification:new', {
+      _id: notification._id,
+      recipient: notification.recipient,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      relatedId: notification.relatedId,
+      relatedType: notification.relatedType,
+      link: notification.link,
+      isRead: notification.isRead,
+      createdAt: notification.createdAt
+    });
+  } catch (socketError) {
+    // MongoDB persistence remains the source of truth if socket emission fails
+  }
 
   return notification;
 };
@@ -105,8 +121,26 @@ const createManyNotifications = async (notifications) => {
 
   const createdDocs = await Notification.insertMany(prepared);
 
-  // Future Part B integration point:
-  // createdDocs.forEach(doc => emitNotificationToUser(doc.recipient, doc));
+  // Emit real-time notifications to each recipient's private room
+  try {
+    const { emitToUser } = require('../socket');
+    createdDocs.forEach((doc) => {
+      emitToUser(doc.recipient, 'notification:new', {
+        _id: doc._id,
+        recipient: doc.recipient,
+        type: doc.type,
+        title: doc.title,
+        message: doc.message,
+        relatedId: doc.relatedId,
+        relatedType: doc.relatedType,
+        link: doc.link,
+        isRead: doc.isRead,
+        createdAt: doc.createdAt
+      });
+    });
+  } catch (socketError) {
+    // MongoDB persistence remains intact if socket emission encounters an issue
+  }
 
   return createdDocs;
 };

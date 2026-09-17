@@ -3,12 +3,15 @@ import { LogOut, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import { useAuth } from '../../context/AuthContext';
+import NotificationBell from './NotificationBell';
+import { disconnectSocket } from '../../services/socket';
 
 function Header() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
   const handleLogout = () => {
+    disconnectSocket();
     logout();
     navigate('/login', { replace: true });
   };
@@ -37,6 +40,7 @@ function Header() {
         </div>
       </motion.div>
       <div className="header-actions">
+        {user && <NotificationBell />}
         <motion.div className="header-user" whileHover={{ y: -2 }}>
           <span className="header-user-icon">
             <UserRound size={18} />
