@@ -1,10 +1,34 @@
 const mongoose = require('mongoose');
 const Notice = require('../models/Notice');
+const User = require('../models/User');
+const { createManyNotifications } = require('../services/notificationService');
 
 const allowedTargetAudiences = ['All', 'Students', 'Faculty', 'Department'];
 const allowedPriorities = ['Normal', 'Important', 'Urgent'];
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const findNoticeRecipients = async (targetAudience, excludeUserId = null) => {
+  const filter = { isActive: true };
+
+  if (excludeUserId) {
+    filter._id = { $ne: excludeUserId };
+  }
+
+  if (targetAudience === 'Students') {
+    filter.role = 'student';
+  } else if (targetAudience === 'Department' || targetAudience === 'Faculty') {
+    filter.role = 'department';
+  }
+
+  return User.find(filter).select('_id role');
+};
+
+const getNoticeLinkForRole = (role) => {
+  if (role === 'student') return '/student/notices';
+  if (role === 'admin') return '/admin/notices';
+  return '/notifications';
+};
 
 const createNotice = async (req, res) => {
   try {
@@ -39,6 +63,25 @@ const createNotice = async (req, res) => {
       priority,
       expiryDate
     });
+
+    // H1, H2, H5, H6, H7: Notify matching target audience users
+    try {
+      const recipients = await findNoticeRecipients(targetAudience, req.user._id);
+      if (recipients.length > 0) {
+        const notifications = recipients.map((user) => ({
+          recipient: user._id,
+          type: 'NOTICE_CREATED',
+          title: 'New Campus Notice',
+          message: `New notice '${notice.title}' has been published.`,
+          relatedId: notice._id,
+          relatedType: 'Notice',
+          link: getNoticeLinkForRole(user.role)
+        }));
+        await createManyNotifications(notifications);
+      }
+    } catch (notifError) {
+      console.error('Failed to dispatch notice created notifications:', notifError.message);
+    }
 
     return res.status(201).json({
       success: true,
@@ -144,6 +187,21 @@ const updateNotice = async (req, res) => {
       });
     }
 
+    const isTitleChanged = title !== undefined && title.trim() !== notice.title;
+    const isDescriptionChanged = description !== undefined && description.trim() !== notice.description;
+    const isAudienceChanged = targetAudience !== undefined && targetAudience !== notice.targetAudience;
+    const isPriorityChanged = priority !== undefined && priority !== notice.priority;
+    const isExpiryChanged = expiryDate !== undefined && String(expiryDate) !== String(notice.expiryDate);
+    const isStatusChanged = isActive !== undefined && isActive !== notice.isActive;
+
+    const hasMeaningfulChange =
+      isTitleChanged ||
+      isDescriptionChanged ||
+      isAudienceChanged ||
+      isPriorityChanged ||
+      isExpiryChanged ||
+      isStatusChanged;
+
     if (title !== undefined) notice.title = title;
     if (description !== undefined) notice.description = description;
     if (targetAudience !== undefined) notice.targetAudience = targetAudience;
@@ -153,6 +211,27 @@ const updateNotice = async (req, res) => {
 
     const updatedNotice = await notice.save();
     await updatedNotice.populate('postedBy', 'name role');
+
+    // H3, H4, H5, H6, H7: Notify matching target audience users on meaningful update
+    if (hasMeaningfulChange && updatedNotice.isActive) {
+      try {
+        const recipients = await findNoticeRecipients(updatedNotice.targetAudience, req.user._id);
+        if (recipients.length > 0) {
+          const notifications = recipients.map((user) => ({
+            recipient: user._id,
+            type: 'NOTICE_UPDATED',
+            title: 'Campus Notice Updated',
+            message: `Campus notice '${updatedNotice.title}' has been updated.`,
+            relatedId: updatedNotice._id,
+            relatedType: 'Notice',
+            link: getNoticeLinkForRole(user.role)
+          }));
+          await createManyNotifications(notifications);
+        }
+      } catch (notifError) {
+        console.error('Failed to dispatch notice updated notifications:', notifError.message);
+      }
+    }
 
     return res.status(200).json({
       success: true,

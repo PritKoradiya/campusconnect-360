@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const Complaint = require('../models/Complaint');
 const Department = require('../models/Department');
+const User = require('../models/User');
+const { createNotification, createManyNotifications } = require('../services/notificationService');
 
 const allowedStatuses = ['Pending', 'In Progress', 'Resolved', 'Rejected'];
 const allowedPriorities = ['Low', 'Medium', 'High', 'Urgent'];
@@ -24,6 +26,34 @@ const isDepartmentUserAssigned = (user, complaint) => {
     department.name?.trim().toLowerCase() === userDepartment ||
     department.code?.trim().toLowerCase() === userDepartment
   );
+};
+
+const findDepartmentUsers = async (departmentDoc) => {
+  if (!departmentDoc) return [];
+  const deptIdStr = departmentDoc._id ? departmentDoc._id.toString() : departmentDoc.toString();
+  const deptName = departmentDoc.name ? departmentDoc.name.trim() : '';
+  const deptCode = departmentDoc.code ? departmentDoc.code.trim() : '';
+
+  const orConditions = [{ department: deptIdStr }];
+  if (deptName) {
+    orConditions.push({ department: new RegExp(`^${deptName}$`, 'i') });
+    orConditions.push({ department: new RegExp(deptName, 'i') });
+  }
+  if (deptCode) {
+    orConditions.push({ department: new RegExp(`^${deptCode}$`, 'i') });
+  }
+
+  const users = await User.find({
+    role: 'department',
+    isActive: true,
+    $or: orConditions
+  }).select('_id');
+
+  const uniqueMap = new Map();
+  users.forEach((u) => {
+    uniqueMap.set(u._id.toString(), u);
+  });
+  return Array.from(uniqueMap.values());
 };
 
 const findComplaintWithDetails = async (id) => {
@@ -76,6 +106,26 @@ const submitComplaint = async (req, res) => {
       imageUrl: imageUrl || '',
       status: 'Pending'
     });
+
+    // G1: Notify Admins of new complaint submission
+    try {
+      const studentName = req.user.name || 'a student';
+      const adminUsers = await User.find({ role: 'admin', isActive: true }).select('_id');
+      if (adminUsers.length > 0) {
+        const notifications = adminUsers.map((admin) => ({
+          recipient: admin._id,
+          type: 'COMPLAINT_CREATED',
+          title: 'New Complaint Submitted',
+          message: `New complaint submitted by ${studentName}.`,
+          relatedId: complaint._id,
+          relatedType: 'Complaint',
+          link: '/admin/complaints'
+        }));
+        await createManyNotifications(notifications);
+      }
+    } catch (notifError) {
+      console.error('Failed to dispatch complaint created notifications:', notifError.message);
+    }
 
     return res.status(201).json({
       success: true,
@@ -235,6 +285,18 @@ const updateComplaintStatus = async (req, res) => {
       });
     }
 
+    const oldStatus = complaint.status;
+    const newStatus = status;
+    const statusChanged = oldStatus !== newStatus;
+
+    const oldDeptRemarks = (complaint.departmentRemarks || '').trim();
+    const newDeptRemarks = departmentRemarks !== undefined ? departmentRemarks.trim() : null;
+    const deptRemarksChanged = newDeptRemarks !== null && newDeptRemarks !== oldDeptRemarks && newDeptRemarks.length > 0;
+
+    const oldAdminRemarks = (complaint.adminRemarks || '').trim();
+    const newAdminRemarks = adminRemarks !== undefined ? adminRemarks.trim() : null;
+    const adminRemarksChanged = newAdminRemarks !== null && newAdminRemarks !== oldAdminRemarks && newAdminRemarks.length > 0;
+
     complaint.status = status;
 
     if (adminRemarks !== undefined) {
@@ -250,6 +312,65 @@ const updateComplaintStatus = async (req, res) => {
     const updatedComplaint = await complaint.save();
     await updatedComplaint.populate('student', 'name enrollmentNo email');
     await updatedComplaint.populate('department', 'name code');
+
+    // G4, G5, G6, G7: Notify student of status change / resolution / remarks
+    try {
+      const studentId = updatedComplaint.student?._id || updatedComplaint.student;
+      if (studentId) {
+        // G5: Resolution notification (preferred single notification for resolution)
+        if (statusChanged && newStatus === 'Resolved') {
+          const deptName = updatedComplaint.department?.name || 'the department';
+          await createNotification({
+            recipient: studentId,
+            type: 'COMPLAINT_RESOLVED',
+            title: 'Complaint Resolved',
+            message: `Your complaint has been resolved by ${deptName}.`,
+            relatedId: updatedComplaint._id,
+            relatedType: 'Complaint',
+            link: '/student/my-complaints'
+          });
+        } else if (statusChanged) {
+          // G4: Status change notification
+          await createNotification({
+            recipient: studentId,
+            type: 'COMPLAINT_STATUS',
+            title: 'Complaint Status Updated',
+            message: `Your complaint status changed from ${oldStatus} to ${newStatus}.`,
+            relatedId: updatedComplaint._id,
+            relatedType: 'Complaint',
+            link: '/student/my-complaints'
+          });
+        }
+
+        // G6: Department remark notification
+        if (deptRemarksChanged) {
+          await createNotification({
+            recipient: studentId,
+            type: 'COMPLAINT_REMARK',
+            title: 'Department Remark Added',
+            message: 'New department remark was added to your complaint.',
+            relatedId: updatedComplaint._id,
+            relatedType: 'Complaint',
+            link: '/student/my-complaints'
+          });
+        }
+
+        // G7: Admin remark notification
+        if (adminRemarksChanged) {
+          await createNotification({
+            recipient: studentId,
+            type: 'COMPLAINT_REMARK',
+            title: 'Admin Remark Added',
+            message: 'New admin remark was added to your complaint.',
+            relatedId: updatedComplaint._id,
+            relatedType: 'Complaint',
+            link: '/student/my-complaints'
+          });
+        }
+      }
+    } catch (notifError) {
+      console.error('Failed to dispatch complaint status/remark notifications:', notifError.message);
+    }
 
     return res.status(200).json({
       success: true,
@@ -315,6 +436,38 @@ const assignComplaintToDepartment = async (req, res) => {
     const updatedComplaint = await complaint.save();
     await updatedComplaint.populate('student', 'name enrollmentNo email');
     await updatedComplaint.populate('department', 'name code');
+
+    // G2 / G3: Notify assigned department and student
+    try {
+      const deptUsers = await findDepartmentUsers(departmentExists);
+      if (deptUsers.length > 0) {
+        const deptNotifications = deptUsers.map((u) => ({
+          recipient: u._id,
+          type: 'COMPLAINT_ASSIGNED',
+          title: 'New Complaint Assigned',
+          message: 'New complaint assigned to your department.',
+          relatedId: updatedComplaint._id,
+          relatedType: 'Complaint',
+          link: '/department/complaints'
+        }));
+        await createManyNotifications(deptNotifications);
+      }
+
+      const studentId = updatedComplaint.student?._id || updatedComplaint.student;
+      if (studentId) {
+        await createNotification({
+          recipient: studentId,
+          type: 'COMPLAINT_ASSIGNED',
+          title: 'Complaint Assigned',
+          message: `Your complaint has been assigned to ${departmentExists.name}.`,
+          relatedId: updatedComplaint._id,
+          relatedType: 'Complaint',
+          link: '/student/my-complaints'
+        });
+      }
+    } catch (notifError) {
+      console.error('Failed to dispatch complaint assignment notifications:', notifError.message);
+    }
 
     return res.status(200).json({
       success: true,
