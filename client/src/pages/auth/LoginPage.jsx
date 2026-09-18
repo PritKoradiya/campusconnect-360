@@ -113,11 +113,23 @@ function LoginPage() {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
+
+    const trimmedEmail = formData.email.trim();
+    if (!trimmedEmail) {
+      setErrorMessage('Email address is required');
+      return;
+    }
+
+    if (!formData.password) {
+      setErrorMessage('Password is required');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const authData = await login({
-        email: formData.email,
+        email: trimmedEmail,
         password: formData.password,
         role: formData.role,
       });

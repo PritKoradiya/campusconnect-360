@@ -58,4 +58,27 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Pre-save middleware to hash password if modified and not already hashed
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) {
+    return next();
+  }
+
+  // If password is already a bcrypt hash, don't re-hash
+  if (/^\$2[aby]\$\d{2}\$/.test(this.password)) {
+    return next();
+  }
+
+  const bcrypt = require('bcryptjs');
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+// Method to verify password against hash
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  const bcrypt = require('bcryptjs');
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
 module.exports = mongoose.model('User', userSchema);

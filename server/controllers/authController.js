@@ -45,7 +45,9 @@ const registerUser = async (req, res) => {
       phone
     } = req.body;
 
-    if (!name || !email || !password) {
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!name || !normalizedEmail || !password) {
       return res.status(400).json({
         success: false,
         message: 'Name, email, and password are required'
@@ -61,7 +63,7 @@ const registerUser = async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
       return res.status(400).json({
@@ -73,9 +75,9 @@ const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
-      name,
-      enrollmentNo,
-      email,
+      name: typeof name === 'string' ? name.trim() : name,
+      enrollmentNo: typeof enrollmentNo === 'string' ? enrollmentNo.trim() : enrollmentNo,
+      email: normalizedEmail,
       password: hashedPassword,
       role,
       branch,
@@ -96,16 +98,32 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
-    if (!email || !password) {
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!normalizedEmail && !password) {
       return res.status(400).json({
         success: false,
         message: 'Email and password are required'
       });
     }
 
-    const user = await User.findOne({ email });
+    if (!normalizedEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is required'
+      });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(401).json({
@@ -114,12 +132,28 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (role && user.role.toLowerCase() !== role.trim().toLowerCase()) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    const isPasswordMatch = user.matchPassword
+      ? await user.matchPassword(password)
+      : await bcrypt.compare(password, user.password);
 
     if (!isPasswordMatch) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Account is deactivated. Please contact administrator.'
       });
     }
 
