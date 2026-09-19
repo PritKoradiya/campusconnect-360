@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const LostFound = require('../models/LostFound');
+const User = require('../models/User');
+const { createNotification, createManyNotifications } = require('../services/notificationService');
 
 const allowedTypes = ['Lost', 'Found'];
 const allowedStatuses = ['Open', 'Claimed', 'Closed'];
@@ -12,6 +14,11 @@ const isOwnerOrAdmin = (user, item) => {
 
 const populateUserFields = (query) => {
   return query.populate('user', 'name email enrollmentNo role');
+};
+
+const getLostFoundLinkForRole = (role) => {
+  if (role === 'admin') return '/admin/reports';
+  return '/student/lost-found';
 };
 
 const createLostFoundItem = async (req, res) => {
@@ -43,6 +50,25 @@ const createLostFoundItem = async (req, res) => {
       imageUrl: imageUrl || '',
       status: 'Open'
     });
+
+    // J1, J6, J7, J8, J13, J14: Notify Admins of new Lost & Found report
+    try {
+      const adminUsers = await User.find({ role: 'admin', isActive: true, _id: { $ne: req.user._id } }).select('_id role');
+      if (adminUsers.length > 0) {
+        const notifications = adminUsers.map((admin) => ({
+          recipient: admin._id,
+          type: 'LOST_FOUND_UPDATE',
+          title: 'New Lost & Found Report',
+          message: 'New lost & found report has been submitted.',
+          relatedId: item._id,
+          relatedType: 'LostFound',
+          link: getLostFoundLinkForRole(admin.role)
+        }));
+        await createManyNotifications(notifications);
+      }
+    } catch (notifError) {
+      console.error('Failed to dispatch lost & found created notifications:', notifError.message);
+    }
 
     return res.status(201).json({
       success: true,
@@ -167,6 +193,25 @@ const updateLostFoundItem = async (req, res) => {
       });
     }
 
+    const isTypeChanged = type !== undefined && type !== item.type;
+    const isItemNameChanged = itemName !== undefined && itemName.trim() !== item.itemName;
+    const isDescriptionChanged = description !== undefined && description.trim() !== item.description;
+    const isLocationChanged = location !== undefined && location.trim() !== item.location;
+    const isDateChanged =
+      itemDate !== undefined &&
+      new Date(itemDate).getTime() !== new Date(item.itemDate).getTime();
+    const isContactChanged = contactInfo !== undefined && contactInfo.trim() !== item.contactInfo;
+    const isImageChanged = imageUrl !== undefined && imageUrl !== item.imageUrl;
+
+    const hasMeaningfulChange =
+      isTypeChanged ||
+      isItemNameChanged ||
+      isDescriptionChanged ||
+      isLocationChanged ||
+      isDateChanged ||
+      isContactChanged ||
+      isImageChanged;
+
     if (type !== undefined) item.type = type;
     if (itemName !== undefined) item.itemName = itemName;
     if (description !== undefined) item.description = description;
@@ -177,6 +222,25 @@ const updateLostFoundItem = async (req, res) => {
 
     const updatedItem = await item.save();
     await updatedItem.populate('user', 'name email enrollmentNo role');
+
+    // J2, J5, J6, J7, J8, J13, J14: Notify record owner if meaningful change occurred
+    if (hasMeaningfulChange) {
+      try {
+        const ownerId = updatedItem.user?._id || updatedItem.user;
+        const ownerRole = updatedItem.user?.role || 'student';
+        await createNotification({
+          recipient: ownerId,
+          type: 'LOST_FOUND_UPDATE',
+          title: 'Lost & Found Report Updated',
+          message: 'Your lost & found report has been updated.',
+          relatedId: updatedItem._id,
+          relatedType: 'LostFound',
+          link: getLostFoundLinkForRole(ownerRole)
+        });
+      } catch (notifError) {
+        console.error('Failed to dispatch lost & found updated notification:', notifError.message);
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -234,10 +298,33 @@ const updateLostFoundStatus = async (req, res) => {
       });
     }
 
+    const oldStatus = item.status;
+    const newStatus = status;
+    const statusChanged = oldStatus !== newStatus;
+
     item.status = status;
 
     const updatedItem = await item.save();
     await updatedItem.populate('user', 'name email enrollmentNo role');
+
+    // J3, J5, J6, J7, J8, J13, J14: Notify record owner if status actually changed
+    if (statusChanged) {
+      try {
+        const ownerId = updatedItem.user?._id || updatedItem.user;
+        const ownerRole = updatedItem.user?.role || 'student';
+        await createNotification({
+          recipient: ownerId,
+          type: 'LOST_FOUND_UPDATE',
+          title: 'Lost & Found Status Updated',
+          message: `Your lost & found report status changed to ${newStatus}.`,
+          relatedId: updatedItem._id,
+          relatedType: 'LostFound',
+          link: getLostFoundLinkForRole(ownerRole)
+        });
+      } catch (notifError) {
+        console.error('Failed to dispatch lost & found status notification:', notifError.message);
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -280,8 +367,31 @@ const closeLostFoundItem = async (req, res) => {
       });
     }
 
+    const oldStatus = item.status;
+    const statusChanged = oldStatus !== 'Closed';
+
     item.status = 'Closed';
     await item.save();
+
+    // J3, J5, J6, J7, J8, J13, J14: Notify record owner if status actually changed to Closed
+    if (statusChanged) {
+      try {
+        const ownerId = item.user?._id || item.user;
+        const ownerUser = await User.findById(ownerId).select('role');
+        const ownerRole = ownerUser?.role || 'student';
+        await createNotification({
+          recipient: ownerId,
+          type: 'LOST_FOUND_UPDATE',
+          title: 'Lost & Found Status Updated',
+          message: 'Your lost & found report status changed to Closed.',
+          relatedId: item._id,
+          relatedType: 'LostFound',
+          link: getLostFoundLinkForRole(ownerRole)
+        });
+      } catch (notifError) {
+        console.error('Failed to dispatch lost & found close notification:', notifError.message);
+      }
+    }
 
     return res.status(200).json({
       success: true,

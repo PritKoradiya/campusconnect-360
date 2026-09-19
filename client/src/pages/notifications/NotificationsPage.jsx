@@ -109,6 +109,7 @@ const resolveNotificationLink = (item, role) => {
     return '/student/events';
   }
   if (type.startsWith('LOST_FOUND_')) {
+    if (role === 'admin') return '/admin/reports';
     return '/student/lost-found';
   }
   return null;
