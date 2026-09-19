@@ -4220,6 +4220,23 @@
   }
 }
 
+@media (max-width: 600px) {
+  .notif-preview-panel {
+    position: fixed;
+    top: 68px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 90px);
+    transform-origin: top right;
+  }
+
+  .notif-preview-list {
+    max-height: calc(100vh - 190px);
+  }
+}
+
 @media (max-width: 390px) {
   .notif-card {
     padding: 12px 14px;
