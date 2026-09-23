@@ -9,7 +9,10 @@ const {
   cancelEventRegistration,
   getMyRegistrations,
   getMyEventRegistrationStatus,
-  getEventRegistrationsAdmin
+  getEventRegistrationsAdmin,
+  getMyEventPass,
+  checkInAttendance,
+  getEventAttendance
 } = require('../controllers/eventController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
@@ -32,7 +35,14 @@ router.post('/:id/register', protect, authorizeRoles('student'), registerForEven
 router.delete('/:id/register', protect, authorizeRoles('student'), cancelEventRegistration);
 router.get('/:id/registration', protect, authorizeRoles('student'), getMyEventRegistrationStatus);
 
+// QR Pass for Student
+router.get('/:id/pass', protect, authorizeRoles('student'), getMyEventPass);
+
 // Admin / Department participant management route
 router.get('/:id/registrations', protect, authorizeRoles('admin', 'department'), getEventRegistrationsAdmin);
+
+// QR Attendance routes for Admin / Department
+router.post('/:id/attendance/check-in', protect, authorizeRoles('admin', 'department'), checkInAttendance);
+router.get('/:id/attendance', protect, authorizeRoles('admin', 'department'), getEventAttendance);
 
 module.exports = router;

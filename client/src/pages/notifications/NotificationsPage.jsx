@@ -53,6 +53,7 @@ const getTypeIcon = (type) => {
     case 'EVENT_CREATED':
     case 'EVENT_UPDATED':
     case 'EVENT_REGISTRATION':
+    case 'EVENT_ATTENDANCE':
       return <Calendar size={18} className="notif-type-icon notif-type-event" />;
     case 'LOST_FOUND_UPDATE':
       return <Search size={18} className="notif-type-icon notif-type-lostfound" />;

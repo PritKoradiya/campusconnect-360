@@ -43,3 +43,20 @@ export const getMyEventRegistrationStatus = (eventId) => {
 export const getEventRegistrationsAdmin = (eventId, params = {}) => {
   return api.get(`/events/${eventId}/registrations`, { params });
 };
+
+// ==========================================
+// Event Attendance & QR Check-In Services
+// ==========================================
+
+export const getMyEventPass = (eventId) => {
+  return api.get(`/events/${eventId}/pass`);
+};
+
+export const checkInAttendance = (eventId, data) => {
+  return api.post(`/events/${eventId}/attendance/check-in`, data);
+};
+
+export const getEventAttendance = (eventId, params = {}) => {
+  return api.get(`/events/${eventId}/attendance`, { params });
+};
+

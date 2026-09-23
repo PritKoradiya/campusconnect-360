@@ -14,6 +14,7 @@ import {
   MapPin,
   Plus,
   PowerOff,
+  QrCode,
   RotateCcw,
   Search,
   Sparkles,
@@ -21,6 +22,7 @@ import {
   Users,
   X
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
 import {
@@ -139,6 +141,7 @@ function getDepartmentList(responseData) {
 }
 
 function ManageEvents() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [activeDepts, setActiveDepts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -819,6 +822,22 @@ function ManageEvents() {
                       </td>
                       <td>
                         <div className="admin-action-btn-group">
+                          {/* Attendance / Check-In */}
+                          <button
+                            className="admin-action-btn"
+                            onClick={() => navigate(`/admin/events/${event._id}/attendance`)}
+                            style={{
+                              background: 'rgba(56, 189, 248, 0.12)',
+                              borderColor: 'rgba(56, 189, 248, 0.35)',
+                              color: '#38bdf8'
+                            }}
+                            title="Open QR scanner & live attendance roster"
+                            type="button"
+                          >
+                            <QrCode size={14} />
+                            <span>Attendance</span>
+                          </button>
+
                           {/* View Registrations */}
                           <button
                             className="admin-action-btn"
@@ -1406,14 +1425,28 @@ function ManageEvents() {
                     {formatDate(currentEventForRegs.eventDate)} • {currentEventForRegs.venue || 'Campus Venue'}
                   </p>
                 </div>
-                <button
-                  aria-label="Close modal"
-                  className="track-close-button"
-                  onClick={() => setRegistrationsModalOpen(false)}
-                  type="button"
-                >
-                  <X size={19} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    className="admin-btn-primary"
+                    onClick={() => {
+                      setRegistrationsModalOpen(false);
+                      navigate(`/admin/events/${currentEventForRegs._id}/attendance`);
+                    }}
+                    style={{ fontSize: '12px', padding: '0 12px', minHeight: '34px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    type="button"
+                  >
+                    <QrCode size={14} />
+                    <span>Open Attendance Scanner</span>
+                  </button>
+                  <button
+                    aria-label="Close modal"
+                    className="track-close-button"
+                    onClick={() => setRegistrationsModalOpen(false)}
+                    type="button"
+                  >
+                    <X size={19} />
+                  </button>
+                </div>
               </div>
 
               {/* Statistics Overview */}

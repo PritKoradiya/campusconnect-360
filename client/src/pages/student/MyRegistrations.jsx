@@ -7,10 +7,13 @@ import {
   CalendarCheck,
   CalendarDays,
   CheckCircle2,
+  CheckCheck,
   Clock,
   Clock3,
+  Download,
   ExternalLink,
   MapPin,
+  QrCode,
   RotateCw,
   Search,
   Sparkles,
@@ -18,9 +21,14 @@ import {
   X
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import QRCode from 'qrcode';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
-import { cancelEventRegistration, getMyRegistrations } from '../../services/eventService';
+import {
+  cancelEventRegistration,
+  getMyRegistrations,
+  getMyEventPass
+} from '../../services/eventService';
 
 const FILTER_TABS = [
   { id: 'all', label: 'All Registrations' },
@@ -67,6 +75,7 @@ function MyRegistrations() {
   const [summary, setSummary] = useState({
     total: 0,
     registered: 0,
+    checkedIn: 0,
     upcoming: 0,
     completed: 0,
     cancelled: 0
@@ -86,6 +95,54 @@ function MyRegistrations() {
   const [regToCancel, setRegToCancel] = useState(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
+
+  // QR Pass Modal State
+  const [passModalOpen, setPassModalOpen] = useState(false);
+  const [passData, setPassData] = useState(null);
+  const [passLoading, setPassLoading] = useState(false);
+  const [passError, setPassError] = useState('');
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+
+  const handleOpenPass = async (reg) => {
+    const eventId = reg.event?._id || reg.event?.id || reg.event;
+    if (!eventId) return;
+
+    setPassLoading(true);
+    setPassError('');
+    setPassData(null);
+    setQrCodeDataUrl('');
+    setPassModalOpen(true);
+
+    try {
+      const res = await getMyEventPass(eventId);
+      if (res.data?.success && res.data.pass) {
+        setPassData(res.data.pass);
+        const dataUrl = await QRCode.toDataURL(res.data.pass.qrData, {
+          width: 320,
+          margin: 1.5,
+          color: {
+            dark: '#0a0f1d',
+            light: '#ffffff'
+          }
+        });
+        setQrCodeDataUrl(dataUrl);
+      } else {
+        setPassError(res.data?.message || 'Failed to generate event pass');
+      }
+    } catch (err) {
+      setPassError(err.response?.data?.message || 'Failed to load your event pass.');
+    } finally {
+      setPassLoading(false);
+    }
+  };
+
+  const handleDownloadQr = () => {
+    if (!qrCodeDataUrl || !passData) return;
+    const link = document.createElement('a');
+    link.href = qrCodeDataUrl;
+    link.download = `CC360-EventPass-${passData.ticketId || 'Pass'}.png`;
+    link.click();
+  };
 
   const fetchRegistrations = async (isManual = false) => {
     const token = localStorage.getItem('token');
@@ -303,7 +360,17 @@ function MyRegistrations() {
           </div>
         </AnimatedCard>
 
-        <AnimatedCard className="dashboard-stat-card tone-cyan" delay={0.12}>
+        <AnimatedCard className="dashboard-stat-card tone-success" delay={0.11}>
+          <span className="dashboard-card-icon">
+            <CheckCheck size={22} />
+          </span>
+          <div>
+            <p>Checked In</p>
+            <strong>{summary.checkedIn || 0}</strong>
+          </div>
+        </AnimatedCard>
+
+        <AnimatedCard className="dashboard-stat-card tone-cyan" delay={0.14}>
           <span className="dashboard-card-icon">
             <Clock3 size={22} />
           </span>
@@ -313,7 +380,7 @@ function MyRegistrations() {
           </div>
         </AnimatedCard>
 
-        <AnimatedCard className="dashboard-stat-card tone-success" delay={0.16}>
+        <AnimatedCard className="dashboard-stat-card tone-success" delay={0.17}>
           <span className="dashboard-card-icon">
             <Sparkles size={22} />
           </span>
@@ -442,14 +509,44 @@ function MyRegistrations() {
                       <span className="track-badge priority-high" style={{ fontSize: '11px', padding: '2px 8px' }}>
                         Cancelled
                       </span>
-                    ) : isUpcoming ? (
-                      <span className="track-badge status-in-progress" style={{ fontSize: '11px', padding: '2px 8px' }}>
-                        Upcoming
-                      </span>
                     ) : (
-                      <span className="track-badge priority-low" style={{ fontSize: '11px', padding: '2px 8px' }}>
-                        Completed
-                      </span>
+                      <>
+                        {reg.isCheckedIn ? (
+                          <span
+                            className="track-badge status-resolved"
+                            style={{
+                              fontSize: '11px',
+                              padding: '2px 8px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: 'rgba(34, 197, 94, 0.16)',
+                              color: '#4ade80',
+                              border: '1px solid rgba(34, 197, 94, 0.35)'
+                            }}
+                          >
+                            <CheckCircle2 size={12} />
+                            Checked In
+                          </span>
+                        ) : (
+                          <span
+                            className="track-badge priority-medium"
+                            style={{ fontSize: '11px', padding: '2px 8px' }}
+                          >
+                            Not Checked In
+                          </span>
+                        )}
+
+                        {isUpcoming ? (
+                          <span className="track-badge status-in-progress" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                            Upcoming
+                          </span>
+                        ) : (
+                          <span className="track-badge priority-low" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                            Completed
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -477,14 +574,36 @@ function MyRegistrations() {
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
+                  {!isCancelled && (
+                    <button
+                      className="admin-btn-primary"
+                      onClick={() => handleOpenPass(reg)}
+                      style={{
+                        flex: 1,
+                        minWidth: '125px',
+                        minHeight: '38px',
+                        padding: '0 12px',
+                        fontSize: '13px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                      type="button"
+                    >
+                      <QrCode size={15} />
+                      <span>View QR Pass</span>
+                    </button>
+                  )}
+
                   <button
                     className="track-action-button"
                     onClick={() => setSelectedReg(reg)}
-                    style={{ flex: 1, minWidth: '100px' }}
+                    style={{ flex: isCancelled ? 1 : 0, minWidth: '85px' }}
                     type="button"
                   >
-                    View Details
+                    Details
                   </button>
 
                   {!isCancelled && isUpcoming && (
@@ -593,9 +712,21 @@ function MyRegistrations() {
                   </strong>
                 </p>
                 <p>
+                  <span>Attendance Status</span>
+                  <strong style={{ color: selectedReg.isCheckedIn ? '#4ade80' : '#38bdf8' }}>
+                    {selectedReg.isCheckedIn ? 'Checked In' : 'Not Checked In'}
+                  </strong>
+                </p>
+                <p>
                   <span>Registered At</span>
                   {formatDateTime(selectedReg.registeredAt || selectedReg.createdAt)}
                 </p>
+                {selectedReg.isCheckedIn && selectedReg.attendance?.checkedInAt && (
+                  <p>
+                    <span>Checked In At</span>
+                    {formatDateTime(selectedReg.attendance.checkedInAt)}
+                  </p>
+                )}
                 {selectedReg.cancelledAt && (
                   <p>
                     <span>Cancelled At</span>
@@ -623,7 +754,22 @@ function MyRegistrations() {
                   flexWrap: 'wrap'
                 }}
               >
-                <div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {selectedReg.status === 'REGISTERED' && (
+                    <button
+                      className="admin-btn-primary"
+                      onClick={() => {
+                        const r = selectedReg;
+                        setSelectedReg(null);
+                        handleOpenPass(r);
+                      }}
+                      type="button"
+                    >
+                      <QrCode size={15} />
+                      <span>View QR Pass</span>
+                    </button>
+                  )}
+
                   {selectedReg.status === 'REGISTERED' && isEventUpcoming(selectedReg.event?.eventDate) && (
                     <button
                       className="chatbot-clear-btn"
@@ -635,34 +781,213 @@ function MyRegistrations() {
                       type="button"
                     >
                       <X size={15} />
-                      <span>Cancel Registration</span>
+                      <span>Cancel</span>
                     </button>
                   )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
-                    className="admin-btn-primary"
+                    className="complaint-secondary-button"
                     onClick={() => {
                       setSelectedReg(null);
                       navigate('/student/events');
                     }}
+                    style={{ width: 'auto', margin: 0 }}
                     type="button"
                   >
-                    <span>Browse All Events</span>
+                    <span>Browse Events</span>
                     <ExternalLink size={14} />
                   </button>
 
                   <button
                     className="complaint-secondary-button"
                     onClick={() => setSelectedReg(null)}
-                    style={{ width: 'auto', minWidth: '90px', margin: 0 }}
+                    style={{ width: 'auto', minWidth: '80px', margin: 0 }}
                     type="button"
                   >
                     Close
                   </button>
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 7. QR Pass Modal */}
+      <AnimatePresence>
+        {passModalOpen && (
+          <motion.div
+            animate={{ opacity: 1 }}
+            className="track-modal-backdrop"
+            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            onClick={() => setPassModalOpen(false)}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="track-modal-card"
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: '440px', padding: '24px' }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              {/* Header */}
+              <div className="track-modal-heading" style={{ marginBottom: '16px' }}>
+                <div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(34, 211, 238, 0.12)', border: '1px solid rgba(34, 211, 238, 0.3)', padding: '2px 8px', borderRadius: '100px', marginBottom: '6px' }}>
+                    <Sparkles size={13} style={{ color: '#22d3ee' }} />
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8', letterSpacing: '0.05em' }}>OFFICIAL EVENT PASS</span>
+                  </div>
+                  <h2 style={{ fontSize: '18px', color: '#f8fafc', margin: 0 }}>
+                    {passData?.event?.title || 'Campus Event Pass'}
+                  </h2>
+                </div>
+                <button
+                  aria-label="Close pass"
+                  className="track-close-button"
+                  onClick={() => setPassModalOpen(false)}
+                  type="button"
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              {passLoading && (
+                <div style={{ textAlign: 'center', padding: '36px 0', color: '#94a3b8' }}>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    style={{ display: 'inline-block', marginBottom: '12px', color: '#22d3ee' }}
+                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                  >
+                    <RotateCw size={32} />
+                  </motion.div>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#e0f2fe' }}>Generating secure event pass...</p>
+                </div>
+              )}
+
+              {passError && (
+                <div className="chatbot-alert chatbot-alert-error" style={{ margin: '16px 0' }}>
+                  <AlertCircle size={18} />
+                  <span>{passError}</span>
+                </div>
+              )}
+
+              {!passLoading && !passError && passData && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Event Details Card */}
+                  <div style={{ background: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(56, 189, 248, 0.15)', borderRadius: '12px', padding: '12px 14px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+                      <div>
+                        <span style={{ color: '#64748b', display: 'block' }}>Date</span>
+                        <strong style={{ color: '#e2e8f0' }}>{formatDate(passData.event?.eventDate)}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', display: 'block' }}>Time</span>
+                        <strong style={{ color: '#e2e8f0' }}>{passData.event?.eventTime || 'TBD'}</strong>
+                      </div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <span style={{ color: '#64748b', display: 'block' }}>Venue</span>
+                        <strong style={{ color: '#38bdf8' }}>{passData.event?.venue || 'Campus Venue'}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QR Code Container */}
+                  <div style={{ textAlign: 'center', background: '#ffffff', borderRadius: '16px', padding: '16px', boxShadow: '0 0 25px rgba(34, 211, 238, 0.2)' }}>
+                    {qrCodeDataUrl ? (
+                      <img
+                        alt={`QR Pass for ${passData.event?.title}`}
+                        src={qrCodeDataUrl}
+                        style={{ width: '220px', height: '220px', display: 'block', margin: '0 auto', imageRendering: 'pixelated' }}
+                      />
+                    ) : (
+                      <div style={{ width: '220px', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: '#64748b' }}>
+                        Loading QR...
+                      </div>
+                    )}
+                    <div style={{ marginTop: '8px', borderTop: '1px dashed #cbd5e1', paddingTop: '8px' }}>
+                      <p style={{ margin: 0, fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em', color: '#0f172a' }}>
+                        PASS ID: #{passData.ticketId}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Attendee Details & Check-In Status */}
+                  <div style={{ background: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(56, 189, 248, 0.15)', borderRadius: '12px', padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ticket Holder</span>
+                      {passData.isCheckedIn ? (
+                        <span
+                          className="track-badge status-resolved"
+                          style={{
+                            fontSize: '11px',
+                            padding: '3px 8px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: 'rgba(34, 197, 94, 0.18)',
+                            color: '#4ade80',
+                            border: '1px solid rgba(34, 197, 94, 0.4)'
+                          }}
+                        >
+                          <CheckCircle2 size={12} />
+                          Checked In
+                        </span>
+                      ) : (
+                        <span
+                          className="track-badge status-in-progress"
+                          style={{
+                            fontSize: '11px',
+                            padding: '3px 8px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Clock size={12} />
+                          Ready for Scan
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: 700, color: '#f8fafc' }}>
+                      {passData.student?.name}
+                    </p>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+                      {passData.student?.enrollmentNo ? `ID: ${passData.student.enrollmentNo} • ` : ''}{passData.student?.email}
+                    </p>
+                    {passData.isCheckedIn && passData.attendance?.checkedInAt && (
+                      <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#4ade80' }}>
+                        Verified on: {formatDateTime(passData.attendance.checkedInAt)} ({passData.attendance.checkInMethod || 'QR_SCAN'})
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                    <button
+                      className="admin-btn-primary"
+                      onClick={handleDownloadQr}
+                      style={{ flex: 1, minHeight: '38px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      type="button"
+                    >
+                      <Download size={15} />
+                      <span>Download QR</span>
+                    </button>
+                    <button
+                      className="complaint-secondary-button"
+                      onClick={() => setPassModalOpen(false)}
+                      style={{ width: 'auto', minWidth: '90px', margin: 0 }}
+                      type="button"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

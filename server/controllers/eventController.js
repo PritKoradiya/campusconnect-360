@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const Event = require('../models/Event');
 const EventRegistration = require('../models/EventRegistration');
+const EventAttendance = require('../models/EventAttendance');
 const User = require('../models/User');
 const { createNotification, createManyNotifications } = require('../services/notificationService');
 
@@ -631,14 +633,34 @@ const getMyRegistrations = async (req, res) => {
       registered: 0,
       upcoming: 0,
       completed: 0,
-      cancelled: 0
+      cancelled: 0,
+      checkedIn: 0
     };
 
-    registrations.forEach((r) => {
+    // Look up attendance records for these registrations
+    const regIds = registrations.map((r) => r._id);
+    const attendances = await EventAttendance.find({
+      registration: { $in: regIds }
+    }).lean();
+
+    const attendanceMap = new Map(attendances.map((a) => [a.registration.toString(), a]));
+
+    const enrichedRegistrations = registrations.map((r) => {
+      const plain = r.toObject ? r.toObject() : { ...r };
+      const att = attendanceMap.get(plain._id.toString());
+      plain.attendance = att || null;
+      plain.isCheckedIn = Boolean(att && att.checkedIn);
+      return plain;
+    });
+
+    enrichedRegistrations.forEach((r) => {
       if (r.status === 'CANCELLED') {
         summary.cancelled += 1;
       } else if (r.status === 'REGISTERED') {
         summary.registered += 1;
+        if (r.isCheckedIn) {
+          summary.checkedIn += 1;
+        }
         const evDate = r.event?.eventDate ? new Date(r.event.eventDate) : null;
         if (evDate) {
           evDate.setHours(23, 59, 59, 999);
@@ -656,9 +678,9 @@ const getMyRegistrations = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Student registrations fetched successfully',
-      count: registrations.length,
+      count: enrichedRegistrations.length,
       summary,
-      registrations
+      registrations: enrichedRegistrations
     });
   } catch (error) {
     return res.status(500).json({
@@ -792,6 +814,449 @@ const getEventRegistrationsAdmin = async (req, res) => {
   }
 };
 
+// ==========================================
+// QR ATTENDANCE SYSTEM CONTROLLER METHODS
+// ==========================================
+
+/**
+ * Get authenticated student's QR pass for a specific event
+ * GET /api/events/:id/pass
+ */
+const getMyEventPass = async (req, res) => {
+  try {
+    const { id: eventId } = req.params;
+    const studentId = req.user._id;
+
+    if (!isValidId(eventId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid event id'
+      });
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    const registration = await EventRegistration.findOne({
+      event: eventId,
+      student: studentId
+    }).populate('student', 'name email enrollmentNo department branch semester phone');
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'You are not registered for this event'
+      });
+    }
+
+    if (registration.status === 'CANCELLED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Your registration for this event was cancelled'
+      });
+    }
+
+    // Check attendance status
+    const attendance = await EventAttendance.findOne({
+      registration: registration._id
+    });
+
+    // Generate signed pass token (opaque and secure; contains no passwords or sensitive PII)
+    const passPayload = {
+      type: 'CC360_EVENT_PASS',
+      regId: registration._id.toString(),
+      eventId: event._id.toString(),
+      studentId: studentId.toString()
+    };
+
+    const passToken = jwt.sign(
+      passPayload,
+      process.env.JWT_SECRET || 'campusconnect360secretkey',
+      { expiresIn: '30d' }
+    );
+
+    const ticketId = registration._id.toString().slice(-8).toUpperCase();
+    const qrData = JSON.stringify({
+      v: '1',
+      ticketId,
+      regId: registration._id.toString(),
+      token: passToken
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Event pass generated successfully',
+      pass: {
+        ticketId,
+        qrData,
+        passToken,
+        registration: {
+          _id: registration._id,
+          status: registration.status,
+          registeredAt: registration.registeredAt
+        },
+        event: {
+          _id: event._id,
+          title: event.title,
+          eventDate: event.eventDate,
+          eventTime: event.eventTime,
+          venue: event.venue,
+          department: event.department,
+          organizer: event.organizer,
+          imageUrl: event.imageUrl
+        },
+        student: registration.student,
+        isCheckedIn: !!attendance,
+        attendance: attendance
+          ? {
+              checkedInAt: attendance.checkedInAt,
+              checkInMethod: attendance.checkInMethod
+            }
+          : null
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Could not generate event pass',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Admin / Department check in attendee via QR scan or manual ID
+ * POST /api/events/:id/attendance/check-in
+ */
+const checkInAttendance = async (req, res) => {
+  try {
+    const { id: eventId } = req.params;
+    let { token, regId, rawQrPayload, checkInMethod } = req.body;
+
+    if (!isValidId(eventId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid event id'
+      });
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Parse rawQrPayload if provided
+    if (rawQrPayload && (!token || !regId)) {
+      if (typeof rawQrPayload === 'string') {
+        try {
+          const parsed = JSON.parse(rawQrPayload);
+          if (parsed.token) token = parsed.token;
+          if (parsed.regId) regId = parsed.regId;
+        } catch {
+          if (!token) token = rawQrPayload;
+        }
+      } else if (typeof rawQrPayload === 'object') {
+        if (rawQrPayload.token) token = rawQrPayload.token;
+        if (rawQrPayload.regId) regId = rawQrPayload.regId;
+      }
+    }
+
+    let determinedMethod = checkInMethod || (token ? 'QR_SCAN' : 'MANUAL');
+
+    // If token is provided, verify signature and payload integrity
+    if (token) {
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET || 'campusconnect360secretkey');
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid or expired QR pass token. Please re-open the pass.',
+          error: err.message
+        });
+      }
+
+      if (decoded.type !== 'CC360_EVENT_PASS') {
+        return res.status(400).json({
+          success: false,
+          message: 'Unrecognized pass format. Invalid QR code.'
+        });
+      }
+
+      // Check if QR pass belongs to the current event
+      if (decoded.eventId !== eventId.toString()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Wrong Event: This QR pass was issued for a different event.'
+        });
+      }
+
+      regId = decoded.regId;
+    }
+
+    if (!regId || !isValidId(regId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration ID or valid QR token is required for check-in'
+      });
+    }
+
+    // Lookup registration
+    const registration = await EventRegistration.findById(regId)
+      .populate('student', 'name email enrollmentNo department branch semester phone')
+      .populate('event', 'title eventDate eventTime venue');
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration record not found'
+      });
+    }
+
+    // Validate event matching
+    const regEventId = registration.event._id ? registration.event._id.toString() : registration.event.toString();
+    if (regEventId !== eventId.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Wrong Event: This registration belongs to a different event.'
+      });
+    }
+
+    // Validate active registration status
+    if (registration.status === 'CANCELLED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot Check In: This registration was cancelled by the student.'
+      });
+    }
+
+    // Check for duplicate attendance (strict server-side guard)
+    const existingAttendance = await EventAttendance.findOne({
+      registration: registration._id
+    });
+
+    if (existingAttendance) {
+      return res.status(400).json({
+        success: false,
+        alreadyCheckedIn: true,
+        message: 'Already Checked In: Student has already checked in for this event.',
+        student: registration.student,
+        attendance: {
+          checkedInAt: existingAttendance.checkedInAt,
+          checkInMethod: existingAttendance.checkInMethod
+        }
+      });
+    }
+
+    // Create attendance record
+    const attendance = await EventAttendance.create({
+      event: eventId,
+      registration: registration._id,
+      student: registration.student._id,
+      checkedIn: true,
+      checkedInAt: new Date(),
+      checkedInBy: req.user._id,
+      checkInMethod: determinedMethod
+    });
+
+    // Send confirmation notification to student
+    try {
+      await createNotification({
+        recipient: registration.student._id,
+        type: 'EVENT_ATTENDANCE',
+        title: 'Event Check-In Confirmed',
+        message: `Your attendance for "${registration.event.title || event.title}" has been successfully recorded. Welcome!`,
+        link: '/student/my-registrations',
+        data: {
+          eventId: event._id,
+          attendanceId: attendance._id,
+          checkedInAt: attendance.checkedInAt
+        }
+      });
+    } catch (notifErr) {
+      console.warn('Failed to send attendance notification:', notifErr.message);
+    }
+
+    // Fetch updated live stats
+    const totalRegistrations = await EventRegistration.countDocuments({
+      event: eventId,
+      status: 'REGISTERED'
+    });
+    const totalCheckedIn = await EventAttendance.countDocuments({ event: eventId });
+    const notCheckedIn = Math.max(0, totalRegistrations - totalCheckedIn);
+    const attendanceRate = totalRegistrations > 0 ? Math.round((totalCheckedIn / totalRegistrations) * 100) : 0;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Attendance recorded successfully',
+      attendance: {
+        _id: attendance._id,
+        checkedInAt: attendance.checkedInAt,
+        checkInMethod: attendance.checkInMethod
+      },
+      student: registration.student,
+      ticketId: registration._id.toString().slice(-8).toUpperCase(),
+      stats: {
+        totalRegistrations,
+        totalCheckedIn,
+        notCheckedIn,
+        attendanceRate
+      }
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        alreadyCheckedIn: true,
+        message: 'Already Checked In: Student has already checked in for this event.'
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: 'Could not record attendance',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Admin / Department view event attendance live metrics and participant roster
+ * GET /api/events/:id/attendance
+ */
+const getEventAttendance = async (req, res) => {
+  try {
+    const { id: eventId } = req.params;
+    const { search, status } = req.query;
+
+    if (!isValidId(eventId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid event id'
+      });
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Get all registered students
+    const registrations = await EventRegistration.find({
+      event: eventId,
+      status: 'REGISTERED'
+    })
+      .populate('student', 'name email enrollmentNo department branch semester phone')
+      .sort({ registeredAt: 1 });
+
+    // Get all attendance records for this event
+    const attendances = await EventAttendance.find({ event: eventId })
+      .populate('checkedInBy', 'name role');
+
+    const attendanceMap = new Map();
+    let qrCount = 0;
+    let manualCount = 0;
+
+    attendances.forEach((att) => {
+      attendanceMap.set(att.registration.toString(), att);
+      if (att.checkInMethod === 'QR_SCAN') qrCount++;
+      if (att.checkInMethod === 'MANUAL') manualCount++;
+    });
+
+    // Build unified roster
+    let roster = registrations.map((reg) => {
+      const att = attendanceMap.get(reg._id.toString());
+      return {
+        registrationId: reg._id,
+        ticketId: reg._id.toString().slice(-8).toUpperCase(),
+        registeredAt: reg.registeredAt,
+        status: reg.status,
+        student: reg.student,
+        isCheckedIn: !!att,
+        attendance: att
+          ? {
+              _id: att._id,
+              checkedInAt: att.checkedInAt,
+              checkInMethod: att.checkInMethod,
+              checkedInBy: att.checkedInBy
+            }
+          : null
+      };
+    });
+
+    // Apply status filter
+    if (status && status !== 'ALL') {
+      const s = status.toUpperCase();
+      if (s === 'CHECKED_IN') {
+        roster = roster.filter((item) => item.isCheckedIn);
+      } else if (s === 'NOT_CHECKED_IN') {
+        roster = roster.filter((item) => !item.isCheckedIn);
+      }
+    }
+
+    // Apply search filter
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      roster = roster.filter((item) => {
+        const s = item.student;
+        if (!s) return false;
+        return (
+          (s.name && s.name.toLowerCase().includes(q)) ||
+          (s.email && s.email.toLowerCase().includes(q)) ||
+          (s.enrollmentNo && s.enrollmentNo.toLowerCase().includes(q)) ||
+          (item.ticketId && item.ticketId.toLowerCase().includes(q))
+        );
+      });
+    }
+
+    const totalRegistrations = registrations.length;
+    const totalCheckedIn = attendances.length;
+    const notCheckedIn = Math.max(0, totalRegistrations - totalCheckedIn);
+    const attendanceRate = totalRegistrations > 0 ? Math.round((totalCheckedIn / totalRegistrations) * 100) : 0;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Event attendance fetched successfully',
+      event: {
+        _id: event._id,
+        title: event.title,
+        eventDate: event.eventDate,
+        eventTime: event.eventTime,
+        venue: event.venue,
+        department: event.department,
+        organizer: event.organizer,
+        maxParticipants: event.maxParticipants
+      },
+      stats: {
+        totalRegistrations,
+        totalCheckedIn,
+        notCheckedIn,
+        attendanceRate,
+        qrCount,
+        manualCount
+      },
+      count: roster.length,
+      roster
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Could not fetch event attendance',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createEvent,
   getAllActiveEvents,
@@ -802,5 +1267,9 @@ module.exports = {
   cancelEventRegistration,
   getMyRegistrations,
   getMyEventRegistrationStatus,
-  getEventRegistrationsAdmin
+  getEventRegistrationsAdmin,
+  getMyEventPass,
+  checkInAttendance,
+  getEventAttendance
 };
+
