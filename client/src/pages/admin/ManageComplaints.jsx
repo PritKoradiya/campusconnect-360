@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
+import ComplaintTimeline from '../../components/common/ComplaintTimeline';
 import {
   assignComplaintToDepartment,
   deleteComplaint,
@@ -1132,6 +1133,12 @@ function ManageComplaints() {
                   </p>
                 )}
               </div>
+
+              <ComplaintTimeline
+                complaintId={selectedComplaint._id || selectedComplaint.id}
+                initialTimeline={selectedComplaint.timeline}
+                initialComplaint={selectedComplaint}
+              />
 
               {/* Modal Footer Controls */}
               <div className="admin-modal-footer">

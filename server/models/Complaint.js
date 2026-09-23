@@ -50,7 +50,72 @@ const complaintSchema = new mongoose.Schema(
     },
     resolvedAt: {
       type: Date
-    }
+    },
+    timeline: [
+      {
+        eventType: {
+          type: String,
+          required: true,
+          enum: [
+            'COMPLAINT_SUBMITTED',
+            'COMPLAINT_ASSIGNED',
+            'COMPLAINT_STATUS_CHANGED',
+            'COMPLAINT_REMARK_ADDED',
+            'COMPLAINT_RESOLVED'
+          ]
+        },
+        title: {
+          type: String,
+          required: true,
+          trim: true
+        },
+        description: {
+          type: String,
+          trim: true,
+          default: ''
+        },
+        status: {
+          type: String,
+          enum: ['Pending', 'In Progress', 'Resolved', 'Rejected'],
+          default: null
+        },
+        actor: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          default: null
+        },
+        actorRole: {
+          type: String,
+          enum: ['student', 'admin', 'department', 'system'],
+          default: 'system'
+        },
+        actorName: {
+          type: String,
+          trim: true,
+          default: ''
+        },
+        department: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Department',
+          default: null
+        },
+        departmentName: {
+          type: String,
+          trim: true,
+          default: ''
+        },
+        remark: {
+          type: String,
+          trim: true,
+          default: ''
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+          required: true
+        }
+      }
+    ]
   },
   {
     timestamps: true

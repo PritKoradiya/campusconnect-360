@@ -4,11 +4,13 @@ import {
   AlertCircle,
   Building2,
   Calendar,
+  CalendarCheck,
   CalendarDays,
   CheckCircle2,
   Clock3,
   Edit2,
   Eye,
+  Mail,
   MapPin,
   Plus,
   PowerOff,
@@ -25,6 +27,7 @@ import {
   createEvent,
   deleteEvent,
   getEventById,
+  getEventRegistrationsAdmin,
   getEvents,
   updateEvent
 } from '../../services/eventService';
@@ -40,7 +43,10 @@ const initialFormData = {
   venue: '',
   department: '',
   organizer: '',
-  imageUrl: ''
+  imageUrl: '',
+  isRegistrationEnabled: true,
+  maxParticipants: '',
+  registrationDeadline: ''
 };
 
 function formatDate(dateValue) {
@@ -53,12 +59,38 @@ function formatDate(dateValue) {
   }
 }
 
+function formatDateTime(dateValue) {
+  if (!dateValue) return 'Not available';
+  try {
+    const d = new Date(dateValue);
+    return isNaN(d.getTime()) ? 'Not available' : d.toLocaleString();
+  } catch {
+    return 'Not available';
+  }
+}
+
 function formatDateInput(dateValue) {
   if (!dateValue) return '';
   try {
     const d = new Date(dateValue);
     if (isNaN(d.getTime())) return '';
     return d.toISOString().split('T')[0];
+  } catch {
+    return '';
+  }
+}
+
+function formatDateTimeLocalInput(dateValue) {
+  if (!dateValue) return '';
+  try {
+    const d = new Date(dateValue);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   } catch {
     return '';
   }
@@ -136,6 +168,15 @@ function ManageEvents() {
   const [deactivateModalOpen, setDeactivateModalOpen] = useState(false);
   const [eventToDeactivate, setEventToDeactivate] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
+
+  // View Registrations Modal State
+  const [registrationsModalOpen, setRegistrationsModalOpen] = useState(false);
+  const [currentEventForRegs, setCurrentEventForRegs] = useState(null);
+  const [participants, setParticipants] = useState([]);
+  const [participantStats, setParticipantStats] = useState(null);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [participantSearch, setParticipantSearch] = useState('');
+  const [participantStatusFilter, setParticipantStatusFilter] = useState('ALL');
 
   const fetchEventsAndDepts = async (isManualRefresh = false) => {
     const token = localStorage.getItem('token');
@@ -263,7 +304,10 @@ function ManageEvents() {
       venue: event.venue || '',
       department: event.department || '',
       organizer: event.organizer || '',
-      imageUrl: event.imageUrl || ''
+      imageUrl: event.imageUrl || '',
+      isRegistrationEnabled: event.isRegistrationEnabled !== false,
+      maxParticipants: event.maxParticipants !== null && event.maxParticipants !== undefined ? event.maxParticipants : '',
+      registrationDeadline: event.registrationDeadline ? formatDateTimeLocalInput(event.registrationDeadline) : ''
     });
     setFormError('');
     setModalOpen(true);
@@ -318,7 +362,10 @@ function ManageEvents() {
         venue: formData.venue.trim(),
         department: formData.department.trim() || undefined,
         organizer: formData.organizer.trim() || undefined,
-        imageUrl: formData.imageUrl.trim() || undefined
+        imageUrl: formData.imageUrl.trim() || undefined,
+        isRegistrationEnabled: Boolean(formData.isRegistrationEnabled),
+        maxParticipants: formData.maxParticipants ? parseInt(formData.maxParticipants, 10) : null,
+        registrationDeadline: formData.registrationDeadline ? new Date(formData.registrationDeadline) : null
       };
 
       if (isEditing) {
@@ -432,6 +479,44 @@ function ManageEvents() {
       }
     } finally {
       setDeactivating(false);
+    }
+  };
+
+  // Open Registrations Modal
+  const handleOpenRegistrationsModal = (event) => {
+    setCurrentEventForRegs(event);
+    setParticipantSearch('');
+    setParticipantStatusFilter('ALL');
+    setRegistrationsModalOpen(true);
+    loadEventParticipants(event._id || event.id, '', 'ALL');
+  };
+
+  const loadEventParticipants = async (eventId, search = '', status = 'ALL') => {
+    try {
+      setParticipantsLoading(true);
+      const res = await getEventRegistrationsAdmin(eventId, { search, status });
+      if (res.data) {
+        setParticipants(res.data.registrations || []);
+        setParticipantStats(res.data.stats || null);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load event registrations');
+    } finally {
+      setParticipantsLoading(false);
+    }
+  };
+
+  const handleParticipantSearchChange = (val) => {
+    setParticipantSearch(val);
+    if (currentEventForRegs) {
+      loadEventParticipants(currentEventForRegs._id || currentEventForRegs.id, val, participantStatusFilter);
+    }
+  };
+
+  const handleParticipantStatusChange = (val) => {
+    setParticipantStatusFilter(val);
+    if (currentEventForRegs) {
+      loadEventParticipants(currentEventForRegs._id || currentEventForRegs.id, participantSearch, val);
     }
   };
 
@@ -734,6 +819,22 @@ function ManageEvents() {
                       </td>
                       <td>
                         <div className="admin-action-btn-group">
+                          {/* View Registrations */}
+                          <button
+                            className="admin-action-btn"
+                            onClick={() => handleOpenRegistrationsModal(event)}
+                            style={{
+                              background: 'rgba(34, 211, 238, 0.12)',
+                              borderColor: 'rgba(34, 211, 238, 0.35)',
+                              color: '#22d3ee'
+                            }}
+                            title="View event participant registrations"
+                            type="button"
+                          >
+                            <Users size={14} />
+                            <span>Registrations ({event.registeredCount || 0})</span>
+                          </button>
+
                           {/* View Details */}
                           <button
                             className="admin-action-btn view"
@@ -945,6 +1046,52 @@ function ManageEvents() {
                       value={formData.description}
                     />
                   </label>
+
+                  {/* Registration Settings Section Divider */}
+                  <div className="full-width" style={{ marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
+                      Registration Settings (Optional)
+                    </span>
+                  </div>
+
+                  {/* Registration Enabled Checkbox */}
+                  <label className="complaint-field" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', alignSelf: 'center' }}>
+                    <input
+                      checked={formData.isRegistrationEnabled}
+                      disabled={formSubmitting}
+                      name="isRegistrationEnabled"
+                      onChange={(e) => setFormData((prev) => ({ ...prev, isRegistrationEnabled: e.target.checked }))}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      type="checkbox"
+                    />
+                    <span style={{ margin: 0, cursor: 'pointer' }}>Enable Student Registration</span>
+                  </label>
+
+                  {/* Max Capacity */}
+                  <label className="complaint-field">
+                    <span>Maximum Capacity</span>
+                    <input
+                      disabled={formSubmitting || !formData.isRegistrationEnabled}
+                      min="1"
+                      name="maxParticipants"
+                      onChange={handleFormChange}
+                      placeholder="Leave blank for unlimited"
+                      type="number"
+                      value={formData.maxParticipants}
+                    />
+                  </label>
+
+                  {/* Registration Deadline */}
+                  <label className="complaint-field full-width">
+                    <span>Registration Deadline</span>
+                    <input
+                      disabled={formSubmitting || !formData.isRegistrationEnabled}
+                      name="registrationDeadline"
+                      onChange={handleFormChange}
+                      type="datetime-local"
+                      value={formData.registrationDeadline}
+                    />
+                  </label>
                 </div>
 
                 <div className="chatbot-confirm-actions" style={{ marginTop: '22px' }}>
@@ -1062,6 +1209,23 @@ function ManageEvents() {
                   </span>
                 </p>
                 <p>
+                  <span>Student Registration</span>
+                  <span style={{ color: selectedEvent.isRegistrationEnabled !== false ? '#4ade80' : '#f87171' }}>
+                    {selectedEvent.isRegistrationEnabled !== false ? 'Enabled' : 'Disabled'}
+                  </span>
+                </p>
+                <p>
+                  <span>Capacity & Registrations</span>
+                  {selectedEvent.registeredCount || 0}
+                  {selectedEvent.maxParticipants ? ` / ${selectedEvent.maxParticipants} max` : ' (Unlimited)'}
+                </p>
+                {selectedEvent.registrationDeadline && (
+                  <p>
+                    <span>Registration Deadline</span>
+                    {formatDateTime(selectedEvent.registrationDeadline)}
+                  </p>
+                )}
+                <p>
                   <span>Published Date</span>
                   {formatDate(selectedEvent.createdAt)}
                 </p>
@@ -1075,7 +1239,27 @@ function ManageEvents() {
 
               {/* Modal Footer Controls */}
               <div className="admin-modal-footer">
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    className="admin-action-btn"
+                    onClick={() => {
+                      const obj = selectedEvent;
+                      setSelectedEvent(null);
+                      handleOpenRegistrationsModal(obj);
+                    }}
+                    style={{
+                      background: 'rgba(34, 211, 238, 0.15)',
+                      borderColor: 'rgba(34, 211, 238, 0.4)',
+                      color: '#22d3ee',
+                      minHeight: '38px',
+                      padding: '0 14px'
+                    }}
+                    type="button"
+                  >
+                    <Users size={15} />
+                    <span>View Registrations</span>
+                  </button>
+
                   <button
                     className="admin-action-btn assign"
                     onClick={() => {
@@ -1186,6 +1370,252 @@ function ManageEvents() {
                   type="button"
                 >
                   {deactivating ? 'Deactivating...' : 'Deactivate'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 4. Event Registrations & Participants Modal */}
+      <AnimatePresence>
+        {registrationsModalOpen && currentEventForRegs && (
+          <motion.div
+            animate={{ opacity: 1 }}
+            className="track-modal-backdrop"
+            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            onClick={() => setRegistrationsModalOpen(false)}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="track-modal-card admin-details-modal-card"
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: '880px', width: '95%' }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              {/* Modal Header */}
+              <div className="track-modal-heading">
+                <div>
+                  <p className="dashboard-kicker">Participant Management</p>
+                  <h2>Registrations: {currentEventForRegs.title}</h2>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#94a3b8' }}>
+                    {formatDate(currentEventForRegs.eventDate)} • {currentEventForRegs.venue || 'Campus Venue'}
+                  </p>
+                </div>
+                <button
+                  aria-label="Close modal"
+                  className="track-close-button"
+                  onClick={() => setRegistrationsModalOpen(false)}
+                  type="button"
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              {/* Statistics Overview */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                  gap: '10px',
+                  margin: '16px 0'
+                }}
+              >
+                <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '10px 14px' }}>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Signed Up</span>
+                  <strong style={{ display: 'block', fontSize: '18px', color: '#e0f2fe', marginTop: '2px' }}>
+                    {participantStats?.totalRegistrations ?? 0}
+                  </strong>
+                </div>
+
+                <div style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.25)', borderRadius: '10px', padding: '10px 14px' }}>
+                  <span style={{ fontSize: '11px', color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active Registered</span>
+                  <strong style={{ display: 'block', fontSize: '18px', color: '#4ade80', marginTop: '2px' }}>
+                    {participantStats?.activeRegistrations ?? 0}
+                  </strong>
+                </div>
+
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '10px', padding: '10px 14px' }}>
+                  <span style={{ fontSize: '11px', color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cancelled</span>
+                  <strong style={{ display: 'block', fontSize: '18px', color: '#f87171', marginTop: '2px' }}>
+                    {participantStats?.cancelledRegistrations ?? 0}
+                  </strong>
+                </div>
+
+                <div style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '10px', padding: '10px 14px' }}>
+                  <span style={{ fontSize: '11px', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Capacity & Available</span>
+                  <strong style={{ display: 'block', fontSize: '15px', color: '#38bdf8', marginTop: '4px' }}>
+                    {participantStats?.capacity ? `${participantStats.availableSeats} of ${participantStats.capacity} left` : 'Unlimited'}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Search & Filter Toolbar */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  marginBottom: '16px',
+                  alignItems: 'center',
+                  flexWrap: 'wrap'
+                }}
+              >
+                <div className="track-search-box" style={{ flex: 1, minWidth: '220px' }}>
+                  <Search size={16} />
+                  <input
+                    onChange={(e) => handleParticipantSearchChange(e.target.value)}
+                    placeholder="Search by student name, enrollment no, email..."
+                    type="text"
+                    value={participantSearch}
+                  />
+                  {participantSearch && (
+                    <button
+                      onClick={() => handleParticipantSearchChange('')}
+                      style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+                      type="button"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                <select
+                  aria-label="Filter participants by status"
+                  className="cal-dept-select"
+                  onChange={(e) => handleParticipantStatusChange(e.target.value)}
+                  style={{ minWidth: '150px' }}
+                  value={participantStatusFilter}
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="REGISTERED">Active Only</option>
+                  <option value="CANCELLED">Cancelled Only</option>
+                </select>
+
+                <button
+                  className="cal-btn cal-btn-secondary"
+                  disabled={participantsLoading}
+                  onClick={() => loadEventParticipants(currentEventForRegs._id || currentEventForRegs.id, participantSearch, participantStatusFilter)}
+                  style={{ padding: '8px 12px', fontSize: '12px' }}
+                  title="Reload participant list"
+                  type="button"
+                >
+                  <RotateCcw size={14} />
+                  <span>Refresh</span>
+                </button>
+              </div>
+
+              {/* Table / Content */}
+              {participantsLoading ? (
+                <div className="track-empty-state" style={{ margin: '30px 0' }}>
+                  <div className="chatbot-loading-spinner" style={{ margin: '10px auto' }} />
+                  <p style={{ color: '#94a3b8', fontSize: '13px' }}>Loading participant records...</p>
+                </div>
+              ) : participants.length === 0 ? (
+                <div className="track-empty-state" style={{ margin: '24px 0' }}>
+                  <Users size={36} style={{ color: '#22d3ee', margin: '0 auto 10px' }} />
+                  <p style={{ fontWeight: 700, color: '#e0f2fe', margin: '0 0 4px' }}>
+                    {participantSearch || participantStatusFilter !== 'ALL'
+                      ? 'No participants match your search criteria.'
+                      : 'No students have registered for this event yet.'}
+                  </p>
+                  <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
+                    {participantSearch || participantStatusFilter !== 'ALL'
+                      ? 'Try clearing the search query or status filter.'
+                      : 'Registrations will appear here in real time as students register.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="track-table-wrap" style={{ maxHeight: '340px', overflowY: 'auto' }}>
+                  <table className="track-table">
+                    <thead>
+                      <tr>
+                        <th>Student</th>
+                        <th>Enrollment No</th>
+                        <th>Email</th>
+                        <th>Department</th>
+                        <th>Registered At</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {participants.map((reg) => {
+                        const student = reg.student || {};
+                        const isCancelled = reg.status === 'CANCELLED';
+
+                        return (
+                          <tr key={reg._id}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div
+                                  style={{
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '50%',
+                                    background: 'rgba(34, 211, 238, 0.15)',
+                                    color: '#22d3ee',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontWeight: 700,
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  {(student.name || 'S').charAt(0).toUpperCase()}
+                                </div>
+                                <strong style={{ color: '#f1f5f9' }}>{student.name || 'Student'}</strong>
+                              </div>
+                            </td>
+                            <td>
+                              <span style={{ color: '#cbd5e1', fontFamily: 'monospace' }}>
+                                {student.enrollmentNo || 'N/A'}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                                {student.email || 'N/A'}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{ color: '#cbd5e1' }}>
+                                {student.department || student.branch || 'Campus Student'}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                                {formatDateTime(reg.registeredAt || reg.createdAt)}
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                className={`track-badge ${isCancelled ? 'priority-high' : 'status-resolved'}`}
+                                style={{ fontSize: '11px', padding: '2px 8px' }}
+                              >
+                                {reg.status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Modal Footer */}
+              <div className="admin-modal-footer" style={{ marginTop: '18px' }}>
+                <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                  Showing {participants.length} participant{participants.length === 1 ? '' : 's'}
+                </span>
+                <button
+                  className="complaint-secondary-button"
+                  onClick={() => setRegistrationsModalOpen(false)}
+                  type="button"
+                >
+                  Close
                 </button>
               </div>
             </motion.div>

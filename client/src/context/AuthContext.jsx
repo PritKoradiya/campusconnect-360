@@ -76,6 +76,12 @@ function AuthProvider({ children }) {
     clearAuthData();
   };
 
+  const updateUser = (updatedUser) => {
+    if (!updatedUser) return;
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
+
   const checkAuth = async () => {
     const storedToken = localStorage.getItem('token');
 
@@ -115,6 +121,7 @@ function AuthProvider({ children }) {
       register,
       login,
       logout,
+      updateUser,
       checkAuth
     }),
     [user, token, loading]

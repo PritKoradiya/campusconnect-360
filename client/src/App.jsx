@@ -15,8 +15,12 @@ import DepartmentDashboard from './pages/department/DepartmentDashboard';
 import DepartmentRemarks from './pages/department/DepartmentRemarks';
 import DepartmentStatus from './pages/department/DepartmentStatus';
 import NotFoundPage from './pages/public/NotFoundPage';
+import StudentCampusCalendar from './pages/student/CampusCalendar';
+import AdminCampusCalendar from './pages/admin/CampusCalendar';
+import StudentProfile from './pages/student/StudentProfile';
 import Chatbot from './pages/student/Chatbot';
 import Events from './pages/student/Events';
+import MyRegistrations from './pages/student/MyRegistrations';
 import LostFound from './pages/student/LostFound';
 import MyComplaints from './pages/student/MyComplaints';
 import Notices from './pages/student/Notices';
@@ -38,10 +42,13 @@ function App() {
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
             <Route path="/student/dashboard" element={<StudentDashboard />} />
+            <Route path="/student/profile" element={<StudentProfile />} />
             <Route path="/student/submit-complaint" element={<SubmitComplaint />} />
             <Route path="/student/my-complaints" element={<MyComplaints />} />
             <Route path="/student/notices" element={<Notices />} />
             <Route path="/student/events" element={<Events />} />
+            <Route path="/student/my-registrations" element={<MyRegistrations />} />
+            <Route path="/student/calendar" element={<StudentCampusCalendar />} />
             <Route path="/student/lost-found" element={<LostFound />} />
             <Route path="/student/chatbot" element={<Chatbot />} />
           </Route>
@@ -52,6 +59,7 @@ function App() {
             <Route path="/admin/complaints" element={<ManageComplaints />} />
             <Route path="/admin/notices" element={<ManageNotices />} />
             <Route path="/admin/events" element={<ManageEvents />} />
+            <Route path="/admin/calendar" element={<AdminCampusCalendar />} />
             <Route path="/admin/reports" element={<AdminReports />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['department']} />}>

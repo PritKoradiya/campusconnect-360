@@ -44,6 +44,31 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true
     },
+    gender: {
+      type: String,
+      enum: ['Male', 'Female', 'Other', 'Prefer not to say', ''],
+      default: ''
+    },
+    dateOfBirth: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    address: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    academicYear: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    division: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     profileImage: {
       type: String,
       default: ''

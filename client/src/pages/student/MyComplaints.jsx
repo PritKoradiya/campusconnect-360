@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, Clock3, ClipboardList, Search, Timer, X, XCircle } from 'lucide-react';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
+import ComplaintTimeline from '../../components/common/ComplaintTimeline';
 import { getComplaintById, getMyComplaints } from '../../services/complaintService';
 
 const statusOptions = ['All', 'Pending', 'In Progress', 'Resolved', 'Rejected'];
@@ -300,6 +301,12 @@ function MyComplaints() {
               <p><span>Department remarks</span>{getRemarks(selectedComplaint, 'department')}</p>
               <p><span>Resolved date</span>{formatDate(selectedComplaint.resolvedAt || selectedComplaint.resolvedDate)}</p>
             </div>
+
+            <ComplaintTimeline
+              complaintId={selectedComplaint._id || selectedComplaint.id}
+              initialTimeline={selectedComplaint.timeline}
+              initialComplaint={selectedComplaint}
+            />
 
             <button className="complaint-submit-button" onClick={() => setSelectedComplaint(null)} type="button">
               Close

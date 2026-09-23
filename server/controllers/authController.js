@@ -192,8 +192,160 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+const updateCurrentUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const {
+      name,
+      phone,
+      enrollmentNo,
+      branch,
+      semester,
+      department,
+      gender,
+      dateOfBirth,
+      address,
+      academicYear,
+      division,
+      profileImage
+    } = req.body;
+
+    // Validate name if provided
+    if (name !== undefined) {
+      if (typeof name !== 'string' || !name.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Full name cannot be empty'
+        });
+      }
+      user.name = name.trim();
+    }
+
+    // Validate enrollmentNo uniqueness if changed
+    if (enrollmentNo !== undefined) {
+      const trimmedEnrollment = typeof enrollmentNo === 'string' ? enrollmentNo.trim() : '';
+      if (trimmedEnrollment && trimmedEnrollment !== user.enrollmentNo) {
+        const existingEnrollment = await User.findOne({
+          enrollmentNo: trimmedEnrollment,
+          _id: { $ne: userId }
+        });
+        if (existingEnrollment) {
+          return res.status(400).json({
+            success: false,
+            message: 'Enrollment number is already in use by another student'
+          });
+        }
+        user.enrollmentNo = trimmedEnrollment;
+      } else if (!trimmedEnrollment) {
+        user.enrollmentNo = undefined;
+      }
+    }
+
+    // Phone validation
+    if (phone !== undefined) {
+      user.phone = typeof phone === 'string' ? phone.trim() : '';
+    }
+
+    // Branch & Department
+    if (branch !== undefined) {
+      user.branch = typeof branch === 'string' ? branch.trim() : '';
+    }
+
+    if (department !== undefined) {
+      user.department = typeof department === 'string' ? department.trim() : '';
+    }
+
+    // Semester validation (1 to 12 or empty)
+    if (semester !== undefined) {
+      if (semester === '' || semester === null) {
+        user.semester = undefined;
+      } else {
+        const semNum = Number(semester);
+        if (isNaN(semNum) || semNum < 1 || semNum > 12) {
+          return res.status(400).json({
+            success: false,
+            message: 'Semester must be a valid number between 1 and 12'
+          });
+        }
+        user.semester = semNum;
+      }
+    }
+
+    // Gender
+    if (gender !== undefined) {
+      const validGenders = ['Male', 'Female', 'Other', 'Prefer not to say', ''];
+      if (!validGenders.includes(gender)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid gender value'
+        });
+      }
+      user.gender = gender;
+    }
+
+    // Date of Birth
+    if (dateOfBirth !== undefined) {
+      user.dateOfBirth = typeof dateOfBirth === 'string' ? dateOfBirth.trim() : '';
+    }
+
+    // Address
+    if (address !== undefined) {
+      user.address = typeof address === 'string' ? address.trim() : '';
+    }
+
+    // Academic Year
+    if (academicYear !== undefined) {
+      user.academicYear = typeof academicYear === 'string' ? academicYear.trim() : '';
+    }
+
+    // Division
+    if (division !== undefined) {
+      user.division = typeof division === 'string' ? division.trim() : '';
+    }
+
+    // Profile Image
+    if (profileImage !== undefined) {
+      if (typeof profileImage === 'string') {
+        if (profileImage.length > 5 * 1024 * 1024) {
+          return res.status(400).json({
+            success: false,
+            message: 'Profile photo size is too large (maximum 2MB)'
+          });
+        }
+        user.profileImage = profileImage;
+      }
+    }
+
+    const updatedUser = await user.save();
+    const cleanUser = updatedUser.toObject();
+    delete cleanUser.password;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: cleanUser
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update profile',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
-  getCurrentUser
+  getCurrentUser,
+  updateCurrentUserProfile
 };

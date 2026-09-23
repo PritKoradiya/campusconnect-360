@@ -2,7 +2,8 @@ const express = require('express');
 const {
   registerUser,
   loginUser,
-  getCurrentUser
+  getCurrentUser,
+  updateCurrentUserProfile
 } = require('../controllers/authController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
@@ -11,6 +12,7 @@ const router = express.Router();
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.get('/me', protect, getCurrentUser);
+router.put('/me', protect, updateCurrentUserProfile);
 
 router.get('/student-test', protect, authorizeRoles('student'), (req, res) => {
   res.status(200).json({

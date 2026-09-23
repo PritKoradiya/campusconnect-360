@@ -5,11 +5,19 @@ const {
   updateUserStatus,
   deleteUser
 } = require('../controllers/userController');
+const {
+  getCurrentUser,
+  updateCurrentUserProfile
+} = require('../controllers/authController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// All user management routes are protected and restricted to Admin
+// Current user profile endpoints (accessible to any authenticated user)
+router.get('/me', protect, getCurrentUser);
+router.put('/me', protect, updateCurrentUserProfile);
+
+// Admin-only user management routes
 router.use(protect, authorizeRoles('admin'));
 
 router.get('/', getUsers);

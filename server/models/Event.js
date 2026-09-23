@@ -41,6 +41,23 @@ const eventSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+    isRegistrationEnabled: {
+      type: Boolean,
+      default: true
+    },
+    maxParticipants: {
+      type: Number,
+      default: null
+    },
+    registrationDeadline: {
+      type: Date,
+      default: null
+    },
+    registeredCount: {
+      type: Number,
+      default: 0,
+      min: 0
     }
   },
   {

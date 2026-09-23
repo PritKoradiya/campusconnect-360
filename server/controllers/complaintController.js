@@ -59,7 +59,108 @@ const findDepartmentUsers = async (departmentDoc) => {
 const findComplaintWithDetails = async (id) => {
   return Complaint.findById(id)
     .populate('student', 'name enrollmentNo email')
-    .populate('department', 'name code');
+    .populate('department', 'name code')
+    .populate('timeline.actor', 'name email role')
+    .populate('timeline.department', 'name code');
+};
+
+const getSafelyDerivedTimeline = (complaint) => {
+  if (Array.isArray(complaint.timeline) && complaint.timeline.length > 0) {
+    return [...complaint.timeline].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+  }
+
+  // Reliably derive timeline for legacy complaints created prior to timeline implementation
+  const derived = [];
+  const createdAt = complaint.createdAt ? new Date(complaint.createdAt) : new Date();
+
+  // 1. Complaint Submitted event (guaranteed by createdAt timestamp)
+  derived.push({
+    eventType: 'COMPLAINT_SUBMITTED',
+    title: 'Complaint Submitted',
+    description: `Complaint submitted under ${complaint.category || 'Support'} category with ${complaint.priority || 'Medium'} priority.`,
+    status: 'Pending',
+    actor: complaint.student?._id || complaint.student || null,
+    actorRole: 'student',
+    actorName: complaint.student?.name || 'Student',
+    department: complaint.department?._id || complaint.department || null,
+    departmentName: complaint.department?.name || '',
+    remark: '',
+    timestamp: createdAt
+  });
+
+  // 2. Department Assigned event if complaint has department and moved past Pending
+  if (complaint.department && complaint.status !== 'Pending') {
+    derived.push({
+      eventType: 'COMPLAINT_ASSIGNED',
+      title: 'Assigned to Department',
+      description: `Assigned to ${complaint.department?.name || 'department'}.`,
+      status: 'In Progress',
+      actor: null,
+      actorRole: 'system',
+      actorName: 'System',
+      department: complaint.department?._id || complaint.department || null,
+      departmentName: complaint.department?.name || '',
+      remark: '',
+      timestamp: createdAt
+    });
+  }
+
+  // 3. Department remarks if present
+  if (complaint.departmentRemarks) {
+    derived.push({
+      eventType: 'COMPLAINT_REMARK_ADDED',
+      title: 'Department Remark Added',
+      description: complaint.departmentRemarks,
+      status: complaint.status,
+      actor: null,
+      actorRole: 'department',
+      actorName: 'Department Staff',
+      department: complaint.department?._id || complaint.department || null,
+      departmentName: complaint.department?.name || '',
+      remark: complaint.departmentRemarks,
+      timestamp: complaint.updatedAt || createdAt
+    });
+  }
+
+  // 4. Admin remarks if present
+  if (complaint.adminRemarks) {
+    derived.push({
+      eventType: 'COMPLAINT_REMARK_ADDED',
+      title: 'Admin Remark Added',
+      description: complaint.adminRemarks,
+      status: complaint.status,
+      actor: null,
+      actorRole: 'admin',
+      actorName: 'Administrator',
+      department: complaint.department?._id || complaint.department || null,
+      departmentName: complaint.department?.name || '',
+      remark: complaint.adminRemarks,
+      timestamp: complaint.updatedAt || createdAt
+    });
+  }
+
+  // 5. Resolved event if resolved
+  if (complaint.status === 'Resolved' || complaint.resolvedAt) {
+    derived.push({
+      eventType: 'COMPLAINT_RESOLVED',
+      title: 'Complaint Resolved',
+      description: `Complaint was resolved${complaint.department?.name ? ` by ${complaint.department.name}` : ''}.`,
+      status: 'Resolved',
+      actor: null,
+      actorRole: 'department',
+      actorName: complaint.department?.name || 'Department Staff',
+      department: complaint.department?._id || complaint.department || null,
+      departmentName: complaint.department?.name || '',
+      remark: complaint.departmentRemarks || complaint.adminRemarks || '',
+      timestamp: complaint.resolvedAt ? new Date(complaint.resolvedAt) : (complaint.updatedAt ? new Date(complaint.updatedAt) : createdAt)
+    });
+  }
+
+  return derived.sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
 };
 
 const submitComplaint = async (req, res) => {
@@ -104,7 +205,21 @@ const submitComplaint = async (req, res) => {
       department,
       priority,
       imageUrl: imageUrl || '',
-      status: 'Pending'
+      status: 'Pending',
+      timeline: [
+        {
+          eventType: 'COMPLAINT_SUBMITTED',
+          title: 'Complaint Submitted',
+          description: `Complaint submitted under ${category} category with ${priority} priority.`,
+          status: 'Pending',
+          actor: req.user._id,
+          actorRole: 'student',
+          actorName: req.user.name || 'Student',
+          department: departmentExists._id,
+          departmentName: departmentExists.name,
+          timestamp: new Date()
+        }
+      ]
     });
 
     // G1: Notify Admins of new complaint submission
@@ -147,11 +262,17 @@ const getMyComplaints = async (req, res) => {
       .populate('department', 'name code')
       .sort({ createdAt: -1 });
 
+    const processedComplaints = complaints.map((complaint) => {
+      const obj = complaint.toObject ? complaint.toObject() : { ...complaint };
+      obj.timeline = getSafelyDerivedTimeline(complaint);
+      return obj;
+    });
+
     return res.status(200).json({
       success: true,
       message: 'My complaints fetched successfully',
-      count: complaints.length,
-      complaints
+      count: processedComplaints.length,
+      complaints: processedComplaints
     });
   } catch (error) {
     return res.status(500).json({
@@ -229,10 +350,13 @@ const getComplaintById = async (req, res) => {
       });
     }
 
+    const complaintObj = complaint.toObject ? complaint.toObject() : { ...complaint };
+    complaintObj.timeline = getSafelyDerivedTimeline(complaint);
+
     return res.status(200).json({
       success: true,
       message: 'Complaint details fetched successfully',
-      complaint
+      complaint: complaintObj
     });
   } catch (error) {
     return res.status(500).json({
@@ -308,6 +432,79 @@ const updateComplaintStatus = async (req, res) => {
     }
 
     complaint.resolvedAt = status === 'Resolved' ? new Date() : undefined;
+
+    if (!complaint.timeline || complaint.timeline.length === 0) {
+      complaint.timeline = getSafelyDerivedTimeline(complaint);
+    }
+
+    const actorName = req.user.name || (req.user.role === 'admin' ? 'Admin' : 'Department Staff');
+    const deptDoc = complaint.department;
+    const deptId = deptDoc?._id || deptDoc || null;
+    const deptName = deptDoc?.name || '';
+
+    if (statusChanged) {
+      if (newStatus === 'Resolved') {
+        complaint.timeline.push({
+          eventType: 'COMPLAINT_RESOLVED',
+          title: 'Complaint Resolved',
+          description: `Complaint was resolved by ${actorName}.`,
+          status: 'Resolved',
+          actor: req.user._id,
+          actorRole: req.user.role,
+          actorName,
+          department: deptId,
+          departmentName: deptName,
+          remark: (req.user.role === 'department' ? newDeptRemarks : newAdminRemarks) || '',
+          timestamp: new Date()
+        });
+      } else {
+        complaint.timeline.push({
+          eventType: 'COMPLAINT_STATUS_CHANGED',
+          title: `Status Updated to ${newStatus}`,
+          description: `Status changed from ${oldStatus} to ${newStatus}.`,
+          status: newStatus,
+          actor: req.user._id,
+          actorRole: req.user.role,
+          actorName,
+          department: deptId,
+          departmentName: deptName,
+          remark: '',
+          timestamp: new Date()
+        });
+      }
+    }
+
+    if (deptRemarksChanged) {
+      complaint.timeline.push({
+        eventType: 'COMPLAINT_REMARK_ADDED',
+        title: 'Department Remark Added',
+        description: newDeptRemarks,
+        remark: newDeptRemarks,
+        status: newStatus,
+        actor: req.user._id,
+        actorRole: 'department',
+        actorName,
+        department: deptId,
+        departmentName: deptName,
+        timestamp: new Date()
+      });
+    }
+
+    if (adminRemarksChanged) {
+      complaint.timeline.push({
+        eventType: 'COMPLAINT_REMARK_ADDED',
+        title: 'Admin Remark Added',
+        description: newAdminRemarks,
+        remark: newAdminRemarks,
+        status: newStatus,
+        actor: req.user._id,
+        actorRole: 'admin',
+        actorName,
+        department: deptId,
+        departmentName: deptName,
+        timestamp: new Date()
+      });
+    }
 
     const updatedComplaint = await complaint.save();
     await updatedComplaint.populate('student', 'name enrollmentNo email');
@@ -430,8 +627,26 @@ const assignComplaintToDepartment = async (req, res) => {
       });
     }
 
+    if (!complaint.timeline || complaint.timeline.length === 0) {
+      complaint.timeline = getSafelyDerivedTimeline(complaint);
+    }
+
     complaint.department = department;
     complaint.status = 'In Progress';
+
+    complaint.timeline.push({
+      eventType: 'COMPLAINT_ASSIGNED',
+      title: 'Assigned to Department',
+      description: `Assigned to ${departmentExists.name} by Admin.`,
+      status: 'In Progress',
+      actor: req.user._id,
+      actorRole: 'admin',
+      actorName: req.user.name || 'Admin',
+      department: departmentExists._id,
+      departmentName: departmentExists.name,
+      remark: '',
+      timestamp: new Date()
+    });
 
     const updatedComplaint = await complaint.save();
     await updatedComplaint.populate('student', 'name enrollmentNo email');
@@ -518,11 +733,69 @@ const deleteComplaint = async (req, res) => {
   }
 };
 
+const getComplaintTimeline = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid complaint id'
+      });
+    }
+
+    const complaint = await findComplaintWithDetails(id);
+
+    if (!complaint) {
+      return res.status(404).json({
+        success: false,
+        message: 'Complaint not found'
+      });
+    }
+
+    const isStudentOwner =
+      req.user.role === 'student' && complaint.student._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    const isAssignedDepartment =
+      req.user.role === 'department' && isDepartmentUserAssigned(req.user, complaint);
+
+    if (!isStudentOwner && !isAdmin && !isAssignedDepartment) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not allowed to view this complaint timeline'
+      });
+    }
+
+    const timeline = getSafelyDerivedTimeline(complaint);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Complaint timeline fetched successfully',
+      complaintId: complaint._id,
+      title: complaint.title,
+      category: complaint.category,
+      priority: complaint.priority,
+      currentStatus: complaint.status,
+      department: complaint.department,
+      createdAt: complaint.createdAt,
+      resolvedAt: complaint.resolvedAt,
+      timeline
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Could not fetch complaint timeline',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   submitComplaint,
   getMyComplaints,
   getAllComplaints,
   getComplaintById,
+  getComplaintTimeline,
   updateComplaintStatus,
   assignComplaintToDepartment,
   deleteComplaint

@@ -1,0 +1,690 @@
+/* ========================================================
+   STUDENT PROFILE STYLES - CampusConnect 360
+   ======================================================== */
+
+.profile-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 100%;
+}
+
+/* Header Avatar in Main Layout Header */
+.header-user-avatar-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid rgba(34, 211, 238, 0.6);
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.3);
+}
+
+/* ========================================================
+   1. PROFILE HERO SECTION
+   ======================================================== */
+
+.profile-hero-card {
+  position: relative;
+  overflow: hidden;
+  padding: 32px 36px;
+  background: rgba(10, 22, 38, 0.88);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 20px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.45),
+    0 0 30px rgba(34, 211, 238, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.profile-hero-card::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.profile-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-width: 0;
+  flex: 1 1 500px;
+}
+
+/* Avatar Component */
+.profile-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profile-avatar-img-wrap {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(34, 211, 238, 0.55);
+  background: linear-gradient(135deg, #071525, #0f2b48);
+  box-shadow:
+    0 0 20px rgba(34, 211, 238, 0.25),
+    0 12px 28px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38px;
+  font-weight: 850;
+  color: #38bdf8;
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.3), rgba(6, 182, 212, 0.15));
+  text-transform: uppercase;
+}
+
+.profile-avatar-edit-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #0284c7;
+  border: 2px solid #081628;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.5);
+}
+
+.profile-avatar-edit-btn:hover {
+  background: #06b6d4;
+  transform: scale(1.1);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.6);
+}
+
+/* Identity Details */
+.profile-identity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.profile-kicker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.profile-status-active {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+
+.profile-status-active::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.profile-student-name {
+  font-size: 26px;
+  font-weight: 850;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: -0.4px;
+  word-break: break-word;
+}
+
+.profile-meta-chips {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.profile-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #94a3b8;
+  background: rgba(15, 30, 51, 0.6);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.15);
+}
+
+.profile-meta-chip strong {
+  color: #e0f2fe;
+}
+
+.profile-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ========================================================
+   2. PROFILE COMPLETION SECTION
+   ======================================================== */
+
+.profile-completion-card {
+  padding: 22px 28px;
+  background: rgba(10, 22, 38, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 18px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-completion-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.profile-completion-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-completion-title-wrap h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.profile-completion-percent {
+  font-size: 19px;
+  font-weight: 850;
+  color: #22d3ee;
+  letter-spacing: -0.3px;
+}
+
+.profile-progress-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(15, 30, 51, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  overflow: hidden;
+  position: relative;
+}
+
+.profile-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0284c7, #06b6d4, #38bdf8);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.5);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile-missing-fields-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.profile-missing-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  color: #fda4af;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* ========================================================
+   3. DETAILS GRID: PERSONAL & ACADEMIC
+   ======================================================== */
+
+.profile-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.profile-detail-card {
+  padding: 24px 26px;
+  background: rgba(10, 22, 38, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 18px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.profile-detail-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+}
+
+.profile-detail-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-detail-title-group h2 {
+  font-size: 17px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.profile-card-icon-pill {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #22d3ee;
+}
+
+.profile-fields-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.profile-field-full-width {
+  grid-column: 1 / -1;
+}
+
+.profile-field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-field-label {
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-field-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.profile-empty-tag {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* ========================================================
+   4. STUDENT STATISTICS
+   ======================================================== */
+
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+/* ========================================================
+   5. RECENT ACTIVITY FEED
+   ======================================================== */
+
+.profile-activity-card {
+  padding: 24px 26px;
+  background: rgba(10, 22, 38, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 18px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-activity-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(15, 30, 51, 0.65);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  transition: all 0.2s ease;
+}
+
+.profile-activity-item:hover {
+  background: rgba(19, 39, 68, 0.85);
+  border-color: rgba(34, 211, 238, 0.35);
+  transform: translateX(2px);
+}
+
+.profile-activity-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-activity-icon-pill {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profile-activity-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.profile-activity-title {
+  font-size: 13.5px;
+  font-weight: 750;
+  color: #ffffff;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-activity-sub {
+  font-size: 11.5px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ========================================================
+   6. EDIT PROFILE MODAL
+   ======================================================== */
+
+.profile-edit-modal-card {
+  max-width: 680px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.profile-form-full {
+  grid-column: 1 / -1;
+}
+
+/* Avatar edit inside modal */
+.profile-photo-edit-section {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 16px;
+  background: rgba(15, 30, 51, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.profile-photo-preview-wrap {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #22d3ee;
+  background: #071525;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-photo-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-photo-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.profile-upload-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(34, 211, 238, 0.15);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  color: #22d3ee;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.profile-file-btn:hover {
+  background: rgba(34, 211, 238, 0.25);
+  border-color: #22d3ee;
+}
+
+.profile-remove-photo-btn {
+  background: transparent;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: #fda4af;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.profile-remove-photo-btn:hover {
+  background: rgba(244, 63, 94, 0.15);
+}
+
+/* Avatar presets */
+.profile-avatar-presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.profile-preset-pill {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(56, 189, 248, 0.3);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.2s;
+  padding: 0;
+  background: #091728;
+}
+
+.profile-preset-pill:hover,
+.profile-preset-pill.selected {
+  border-color: #22d3ee;
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+}
+
+.profile-preset-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ========================================================
+   RESPONSIVE BREAKPOINTS
+   ======================================================== */
+
+@media (max-width: 1024px) {
+  .profile-sections-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-hero-card {
+    padding: 24px 20px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-hero-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .profile-hero-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .profile-student-name {
+    font-size: 22px;
+  }
+
+  .profile-fields-list {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-activity-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-avatar-img-wrap {
+    width: 88px;
+    height: 88px;
+  }
+
+  .profile-avatar-fallback {
+    font-size: 30px;
+  }
+}

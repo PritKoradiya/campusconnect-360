@@ -8,6 +8,10 @@ export const getComplaintById = (id) => {
   return api.get(`/complaints/${id}`);
 };
 
+export const getComplaintTimeline = (id) => {
+  return api.get(`/complaints/${id}/timeline`);
+};
+
 export const updateComplaintStatus = (id, data) => {
   return api.put(`/complaints/${id}/status`, data);
 };

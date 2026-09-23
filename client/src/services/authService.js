@@ -11,3 +11,8 @@ export const loginUser = (loginData) => {
 export const getCurrentUser = () => {
   return api.get('/auth/me');
 };
+
+export const updateCurrentUserProfile = (profileData) => {
+  return api.put('/auth/me', profileData);
+};
+

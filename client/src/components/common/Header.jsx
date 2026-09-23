@@ -41,10 +41,28 @@ function Header() {
       </motion.div>
       <div className="header-actions">
         {user && <NotificationBell />}
-        <motion.div className="header-user" whileHover={{ y: -2 }}>
-          <span className="header-user-icon">
-            <UserRound size={18} />
-          </span>
+        <motion.div
+          className="header-user"
+          onClick={() => {
+            if (user?.role === 'student') {
+              navigate('/student/profile');
+            }
+          }}
+          style={user?.role === 'student' ? { cursor: 'pointer' } : undefined}
+          title={user?.role === 'student' ? 'View your student profile' : undefined}
+          whileHover={{ y: -2 }}
+        >
+          {user?.profileImage ? (
+            <img
+              alt={user.name || 'User avatar'}
+              className="header-user-avatar-img"
+              src={user.profileImage}
+            />
+          ) : (
+            <span className="header-user-icon">
+              <UserRound size={18} />
+            </span>
+          )}
           <span>{user ? user.name : 'Guest User'}</span>
           {user && <span className="header-role-badge">{roleLabel}</span>}
         </motion.div>

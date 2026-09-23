@@ -4,12 +4,15 @@ import {
   Bell,
   Bot,
   Building2,
+  Calendar,
+  CalendarCheck,
   CalendarDays,
   ClipboardList,
   FilePlus,
   LayoutDashboard,
   MessageSquareText,
   Search,
+  UserCircle,
   Users
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
@@ -18,10 +21,13 @@ import { useAuth } from '../../context/AuthContext';
 const linksByRole = {
   student: [
     { label: 'Dashboard', path: '/student/dashboard', icon: LayoutDashboard },
+    { label: 'My Profile', path: '/student/profile', icon: UserCircle },
     { label: 'Submit Complaint', path: '/student/submit-complaint', icon: FilePlus },
     { label: 'My Complaints', path: '/student/my-complaints', icon: ClipboardList },
     { label: 'Notices', path: '/student/notices', icon: Bell },
     { label: 'Events', path: '/student/events', icon: CalendarDays },
+    { label: 'My Registrations', path: '/student/my-registrations', icon: CalendarCheck },
+    { label: 'Campus Calendar', path: '/student/calendar', icon: Calendar },
     { label: 'Lost & Found', path: '/student/lost-found', icon: Search },
     { label: 'AI Chatbot', path: '/student/chatbot', icon: Bot }
   ],
@@ -32,6 +38,7 @@ const linksByRole = {
     { label: 'Departments', path: '/admin/departments', icon: Building2 },
     { label: 'Notices', path: '/admin/notices', icon: Bell },
     { label: 'Events', path: '/admin/events', icon: CalendarDays },
+    { label: 'Calendar', path: '/admin/calendar', icon: Calendar },
     { label: 'Reports', path: '/admin/reports', icon: BarChart3 }
   ],
   department: [

@@ -12,6 +12,10 @@ export const getComplaintById = (id) => {
   return api.get(`/complaints/${id}`);
 };
 
+export const getComplaintTimeline = (id) => {
+  return api.get(`/complaints/${id}/timeline`);
+};
+
 export const getDepartmentComplaints = () => {
   return api.get('/complaints');
 };

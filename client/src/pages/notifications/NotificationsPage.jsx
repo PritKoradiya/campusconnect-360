@@ -52,6 +52,7 @@ const getTypeIcon = (type) => {
       return <Bell size={18} className="notif-type-icon notif-type-notice" />;
     case 'EVENT_CREATED':
     case 'EVENT_UPDATED':
+    case 'EVENT_REGISTRATION':
       return <Calendar size={18} className="notif-type-icon notif-type-event" />;
     case 'LOST_FOUND_UPDATE':
       return <Search size={18} className="notif-type-icon notif-type-lostfound" />;
@@ -311,7 +312,7 @@ function NotificationsPage() {
         return ['NOTICE_CREATED', 'NOTICE_UPDATED'].includes(item.type);
       }
       if (activeFilter === 'Events') {
-        return ['EVENT_CREATED', 'EVENT_UPDATED'].includes(item.type);
+        return ['EVENT_CREATED', 'EVENT_UPDATED', 'EVENT_REGISTRATION'].includes(item.type);
       }
       if (activeFilter === 'System') {
         return ['SYSTEM', 'LOST_FOUND_UPDATE'].includes(item.type);
