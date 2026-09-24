@@ -17,6 +17,7 @@ const userRoutes = require('./routes/userRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const activityRoutes = require('./routes/activityRoutes');
+const achievementRoutes = require('./routes/achievementRoutes');
 
 dotenv.config();
 
@@ -44,6 +45,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/achievements', achievementRoutes);
+app.use('/api/students/me/achievements', achievementRoutes);
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({

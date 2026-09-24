@@ -4,6 +4,7 @@ import {
   Activity,
   AlertCircle,
   ArrowRight,
+  Award,
   BookOpen,
   Building2,
   Calendar,
@@ -38,6 +39,7 @@ import { getCurrentUser, updateCurrentUserProfile } from '../../services/authSer
 import { getStudentDashboard } from '../../services/dashboardService';
 import { getDepartments } from '../../services/departmentService';
 import { getStudentActivityFeed } from '../../services/activityService';
+import { getMyAchievements } from '../../services/achievementService';
 import '../../styles/profile.css';
 
 // Preset avatar options for quick selection
@@ -108,6 +110,7 @@ function StudentProfile() {
   const [stats, setStats] = useState({});
   const [recentActivities, setRecentActivities] = useState([]);
   const [departmentOptions, setDepartmentOptions] = useState([]);
+  const [achievementsData, setAchievementsData] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -137,11 +140,12 @@ function StudentProfile() {
       }
       setError('');
 
-      const [userRes, dashRes, deptsRes, actRes] = await Promise.all([
+      const [userRes, dashRes, deptsRes, actRes, achRes] = await Promise.all([
         getCurrentUser(),
         getStudentDashboard().catch(() => ({ data: {} })),
         getDepartments().catch(() => ({ data: [] })),
-        getStudentActivityFeed({ limit: 5 }).catch(() => ({ data: { data: { activities: [] } } }))
+        getStudentActivityFeed({ limit: 5 }).catch(() => ({ data: { data: { activities: [] } } })),
+        getMyAchievements().catch(() => ({ data: { data: null } }))
       ]);
 
       const freshUser = userRes.data?.user || userRes.data;
@@ -149,6 +153,8 @@ function StudentProfile() {
         setProfile(freshUser);
         updateUser(freshUser);
       }
+
+      setAchievementsData(achRes.data?.data || null);
 
       const dashData = dashRes.data?.summary || dashRes.data?.data || dashRes.data || {};
       setStats(dashData);
@@ -687,7 +693,46 @@ function StudentProfile() {
             </AnimatedCard>
           </div>
 
-          {/* 5. RECENT ACTIVITY FEED */}
+          {/* 5. ACHIEVEMENTS PREVIEW */}
+          <AnimatedCard className="profile-detail-card profile-achievements-preview-card" delay={0.28} hover={false}>
+            <div className="profile-detail-card-header">
+              <div className="profile-detail-title-group">
+                <span className="profile-card-icon-pill" style={{ color: '#22d3ee' }}>
+                  <Award size={18} />
+                </span>
+                <h2>Achievements</h2>
+                {achievementsData && (
+                  <span className="track-badge status-resolved" style={{ fontSize: '11px', padding: '2px 8px', marginLeft: '6px' }}>
+                    {achievementsData.summary?.unlocked || 0} Unlocked
+                  </span>
+                )}
+              </div>
+              <Link
+                to="/student/achievements"
+                className="activity-nav-btn"
+                style={{ textDecoration: 'none', padding: '4px 10px', fontSize: '12px' }}
+              >
+                <span>View All</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
+
+            <div className="profile-achievements-badges-row">
+              {(achievementsData?.achievements || []).slice(0, 4).map((badge) => (
+                <div key={badge.id} className={`profile-badge-chip ${badge.isUnlocked ? 'unlocked' : 'locked'}`}>
+                  <span className={`profile-badge-chip-icon ${badge.isUnlocked ? 'unlocked' : 'locked'}`}>
+                    {badge.isUnlocked ? <Award size={16} /> : <Lock size={15} />}
+                  </span>
+                  <div className="profile-badge-chip-text">
+                    <strong>{badge.title}</strong>
+                    <span>{badge.isUnlocked ? 'Unlocked' : 'Locked'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </AnimatedCard>
+
+          {/* 6. RECENT ACTIVITY FEED */}
           <AnimatedCard className="profile-activity-card" delay={0.32} hover={false}>
             <div className="profile-detail-card-header">
               <div className="profile-detail-title-group">

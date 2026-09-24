@@ -27,7 +27,7 @@ import MyRegistrations from './pages/student/MyRegistrations';
 import LostFound from './pages/student/LostFound';
 import MyComplaints from './pages/student/MyComplaints';
 import Notices from './pages/student/Notices';
-import StudentDashboard from './pages/student/StudentDashboard';
+import StudentAchievements from './pages/student/StudentAchievements';
 import StudentActivityFeed from './pages/student/StudentActivityFeed';
 import SubmitComplaint from './pages/student/SubmitComplaint';
 import NotificationsPage from './pages/notifications/NotificationsPage';
@@ -47,6 +47,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/activity" element={<StudentActivityFeed />} />
+            <Route path="/student/achievements" element={<StudentAchievements />} />
             <Route path="/student/profile" element={<StudentProfile />} />
             <Route path="/student/submit-complaint" element={<SubmitComplaint />} />
             <Route path="/student/my-complaints" element={<MyComplaints />} />

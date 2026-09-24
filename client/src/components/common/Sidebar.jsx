@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import {
   Activity,
+  Award,
   BarChart3,
   Bell,
   Bot,
@@ -23,6 +24,7 @@ const linksByRole = {
   student: [
     { label: 'Dashboard', path: '/student/dashboard', icon: LayoutDashboard },
     { label: 'Activity Feed', path: '/student/activity', icon: Activity },
+    { label: 'Achievements', path: '/student/achievements', icon: Award },
     { label: 'My Profile', path: '/student/profile', icon: UserCircle },
     { label: 'Submit Complaint', path: '/student/submit-complaint', icon: FilePlus },
     { label: 'My Complaints', path: '/student/my-complaints', icon: ClipboardList },
