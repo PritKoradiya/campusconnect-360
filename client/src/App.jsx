@@ -27,6 +27,7 @@ import MyRegistrations from './pages/student/MyRegistrations';
 import LostFound from './pages/student/LostFound';
 import MyComplaints from './pages/student/MyComplaints';
 import Notices from './pages/student/Notices';
+import StudentDashboard from './pages/student/StudentDashboard';
 import StudentAchievements from './pages/student/StudentAchievements';
 import StudentActivityFeed from './pages/student/StudentActivityFeed';
 import SubmitComplaint from './pages/student/SubmitComplaint';
