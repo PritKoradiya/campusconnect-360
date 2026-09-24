@@ -12,6 +12,10 @@ export const getLostFoundById = (id) => {
   return api.get(`/lost-found/${id}`);
 };
 
+export const getLostFoundMatches = (id) => {
+  return api.get(`/lost-found/${id}/matches`);
+};
+
 export const createLostFoundItem = (data) => {
   return api.post('/lost-found', data);
 };

@@ -51,4 +51,9 @@ const lostFoundSchema = new mongoose.Schema(
   }
 );
 
+// Indexes for matching candidate queries and sorting
+lostFoundSchema.index({ type: 1, status: 1 });
+lostFoundSchema.index({ status: 1, createdAt: -1 });
+lostFoundSchema.index({ type: 1, itemDate: -1 });
+
 module.exports = mongoose.model('LostFound', lostFoundSchema);

@@ -4,6 +4,7 @@ const {
   getAllActiveLostFoundItems,
   getMyLostFoundItems,
   getLostFoundItemById,
+  getLostFoundMatches,
   updateLostFoundItem,
   updateLostFoundStatus,
   closeLostFoundItem
@@ -16,6 +17,7 @@ router.post('/', protect, authorizeRoles('student', 'admin', 'department'), crea
 router.get('/', protect, authorizeRoles('student', 'admin', 'department'), getAllActiveLostFoundItems);
 router.get('/my', protect, authorizeRoles('student', 'admin', 'department'), getMyLostFoundItems);
 router.get('/:id', protect, authorizeRoles('student', 'admin', 'department'), getLostFoundItemById);
+router.get('/:id/matches', protect, authorizeRoles('student', 'admin', 'department'), getLostFoundMatches);
 router.put('/:id', protect, authorizeRoles('student', 'admin', 'department'), updateLostFoundItem);
 router.put('/:id/status', protect, authorizeRoles('student', 'admin', 'department'), updateLostFoundStatus);
 router.delete('/:id', protect, authorizeRoles('student', 'admin', 'department'), closeLostFoundItem);

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const LostFound = require('../models/LostFound');
 const User = require('../models/User');
 const { createNotification, createManyNotifications } = require('../services/notificationService');
+const { findMatchesForItem, MIN_MATCH_THRESHOLD } = require('../services/lostFoundMatchingService');
 
 const allowedTypes = ['Lost', 'Found'];
 const allowedStatuses = ['Open', 'Claimed', 'Closed'];
@@ -68,6 +69,39 @@ const createLostFoundItem = async (req, res) => {
       }
     } catch (notifError) {
       console.error('Failed to dispatch lost & found created notifications:', notifError.message);
+    }
+
+    // Smart match notification: If a high-confidence match exists with an open item, notify the matched report owner
+    try {
+      const candidateItems = await LostFound.find({
+        type: item.type === 'Lost' ? 'Found' : 'Lost',
+        status: 'Open',
+        _id: { $ne: item._id }
+      })
+        .select('type itemName description location itemDate status user createdAt')
+        .sort({ createdAt: -1 })
+        .limit(30);
+
+      const topMatches = findMatchesForItem(item, candidateItems, { limit: 1, threshold: 75 });
+      if (topMatches.length > 0) {
+        const topMatch = topMatches[0];
+        const candidateOwnerId = topMatch.item.user?._id || topMatch.item.user;
+        if (candidateOwnerId && candidateOwnerId.toString() !== req.user._id.toString()) {
+          const matchedOwner = await User.findById(candidateOwnerId).select('role');
+          const matchedRole = matchedOwner?.role || 'student';
+          await createNotification({
+            recipient: candidateOwnerId,
+            type: 'LOST_FOUND_UPDATE',
+            title: 'Potential Lost & Found Match',
+            message: `A new ${item.type.toLowerCase()} item "${item.itemName}" may match your ${topMatch.item.type.toLowerCase()} report "${topMatch.item.itemName}".`,
+            relatedId: topMatch.item._id,
+            relatedType: 'LostFound',
+            link: getLostFoundLinkForRole(matchedRole)
+          });
+        }
+      }
+    } catch (matchNotifError) {
+      console.error('Failed to dispatch match notification:', matchNotifError.message);
     }
 
     return res.status(201).json({
@@ -406,11 +440,70 @@ const closeLostFoundItem = async (req, res) => {
   }
 };
 
+const getLostFoundMatches = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lost/found item id'
+      });
+    }
+
+    const item = await populateUserFields(LostFound.findById(id));
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: 'Lost/found item not found'
+      });
+    }
+
+    // Determine complementary type (Lost <-> Found)
+    const targetType = item.type === 'Lost' ? 'Found' : 'Lost';
+
+    // Retrieve open complementary candidates, excluding self
+    const candidates = await LostFound.find({
+      type: targetType,
+      _id: { $ne: item._id },
+      status: 'Open'
+    })
+      .select('type itemName description location itemDate contactInfo imageUrl status user createdAt')
+      .populate('user', 'name role')
+      .sort({ createdAt: -1 })
+      .limit(60);
+
+    const matches = findMatchesForItem(item, candidates, { limit: 5, threshold: MIN_MATCH_THRESHOLD });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Matches retrieved successfully',
+      count: matches.length,
+      item: {
+        _id: item._id,
+        type: item.type,
+        itemName: item.itemName,
+        location: item.location,
+        itemDate: item.itemDate
+      },
+      matches
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Could not calculate lost/found matches',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createLostFoundItem,
   getAllActiveLostFoundItems,
   getMyLostFoundItems,
   getLostFoundItemById,
+  getLostFoundMatches,
   updateLostFoundItem,
   updateLostFoundStatus,
   closeLostFoundItem

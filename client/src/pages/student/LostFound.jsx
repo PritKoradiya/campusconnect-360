@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, ClipboardList, PackageCheck, PackageSearch, Plus, Search, X } from 'lucide-react';
+import { Check, CheckCircle2, ClipboardList, ExternalLink, PackageCheck, PackageSearch, Plus, RefreshCw, Search, Sparkles, X } from 'lucide-react';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
 import {
   createLostFoundItem,
   getLostFoundById,
   getLostFoundItems,
+  getLostFoundMatches,
   getMyLostFoundItems,
   updateLostFoundStatus
 } from '../../services/lostFoundService';
@@ -92,6 +93,40 @@ function LostFound() {
   const [statusUpdatingId, setStatusUpdatingId] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [matches, setMatches] = useState([]);
+  const [matchesLoading, setMatchesLoading] = useState(false);
+  const [matchesError, setMatchesError] = useState('');
+
+  const loadMatches = async (itemId) => {
+    if (!itemId) {
+      setMatches([]);
+      return;
+    }
+
+    try {
+      setMatchesLoading(true);
+      setMatchesError('');
+      const response = await getLostFoundMatches(itemId);
+      setMatches(response.data?.matches || []);
+    } catch (err) {
+      if (err.response?.status !== 404) {
+        setMatchesError(err.response?.data?.message || 'Could not load smart matches at this time.');
+      }
+      setMatches([]);
+    } finally {
+      setMatchesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const itemId = selectedItem?._id || selectedItem?.id;
+    if (itemId) {
+      loadMatches(itemId);
+    } else {
+      setMatches([]);
+      setMatchesError('');
+    }
+  }, [selectedItem?._id, selectedItem?.id]);
 
   const loadItems = async (onlyMine = showingMyReports) => {
     const token = localStorage.getItem('token');
@@ -179,11 +214,15 @@ function LostFound() {
       setError('');
       setSuccess('');
 
-      await createLostFoundItem(formData);
-      setSuccess('Item report submitted successfully.');
+      const response = await createLostFoundItem(formData);
+      const createdItem = response.data?.item;
+      setSuccess('Item report submitted successfully. Checking for potential matches...');
       setFormOpen(false);
       setFormData(initialFormData);
       await loadItems(showingMyReports);
+      if (createdItem) {
+        handleViewDetails(createdItem);
+      }
     } catch (err) {
       if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
@@ -447,6 +486,127 @@ function LostFound() {
               <p><span>Posted by</span>{getPostedBy(selectedItem)}</p>
               <p><span>Created date</span>{formatDate(selectedItem.createdAt)}</p>
             </div>
+
+            {/* Smart Lost & Found Matching Section */}
+            <div className="smart-matches-section">
+              <div className="smart-matches-header">
+                <div className="smart-matches-title-wrap">
+                  <Sparkles className="spark-icon" size={20} />
+                  <h3>Possible Matches</h3>
+                  <span className="dashboard-role-pill">
+                    {selectedItem.type === 'Lost' ? 'Found Items' : 'Lost Items'}
+                  </span>
+                </div>
+                <button
+                  className="smart-matches-refresh-btn"
+                  disabled={matchesLoading}
+                  onClick={() => loadMatches(selectedItem._id || selectedItem.id)}
+                  type="button"
+                >
+                  <RefreshCw className={matchesLoading ? 'spin' : ''} size={14} />
+                  Refresh Matches
+                </button>
+              </div>
+
+              {matchesLoading && (
+                <div className="smart-match-loading-box">
+                  <Search className="spin" size={18} />
+                  <span>Analyzing reports for smart matches...</span>
+                </div>
+              )}
+
+              {!matchesLoading && matchesError && (
+                <div className="smart-match-empty-box">
+                  <h4>{matchesError}</h4>
+                </div>
+              )}
+
+              {!matchesLoading && !matchesError && matches.length === 0 && (
+                <div className="smart-match-empty-box">
+                  <h4>No strong matches found yet.</h4>
+                  <p>We'll compare this item with new Lost & Found reports as they are added.</p>
+                </div>
+              )}
+
+              {!matchesLoading && matches.length > 0 && (
+                <div className="smart-match-list">
+                  {matches.map((match) => {
+                    const candidate = match.item;
+                    const candidateId = candidate._id || candidate.id;
+                    const scoreClass =
+                      match.matchScore >= 85
+                        ? 'score-very-strong'
+                        : match.matchScore >= 70
+                        ? 'score-strong'
+                        : 'score-moderate';
+
+                    return (
+                      <div className="smart-match-card" key={candidateId}>
+                        <div className="smart-match-header">
+                          <div className="smart-match-badges">
+                            <span className={`smart-match-score-pill ${scoreClass}`}>
+                              <Sparkles size={13} />
+                              {match.matchScore}% Match
+                            </span>
+                            <span className={getBadgeClass('lostfound-type', candidate.type || 'Found')}>
+                              {candidate.type || 'Found'}
+                            </span>
+                            <span className="dashboard-role-pill">
+                              {match.confidence} Match
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="smart-match-body">
+                          <div className="smart-match-info">
+                            <h4>{getItemName(candidate)}</h4>
+                            <p>{getPreview(candidate.description)}</p>
+                            <div className="smart-match-meta">
+                              <span>Location: {candidate.location || 'Not available'}</span>
+                              <span>Date: {formatDate(candidate.itemDate || candidate.date)}</span>
+                              <span>Contact: {candidate.contactInfo || 'Available on request'}</span>
+                            </div>
+                          </div>
+                          {candidate.imageUrl && (
+                            <img
+                              alt={getItemName(candidate)}
+                              className="smart-match-thumb"
+                              src={candidate.imageUrl}
+                            />
+                          )}
+                        </div>
+
+                        {match.reasons && match.reasons.length > 0 && (
+                          <div className="smart-match-reasons-box">
+                            <p className="smart-match-reasons-title">Why this may match:</p>
+                            <ul className="smart-match-reasons-list">
+                              {match.reasons.map((reason, rIdx) => (
+                                <li key={rIdx}>
+                                  <Check className="check-icon" size={14} />
+                                  <span>{reason}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        <div className="smart-match-actions">
+                          <button
+                            className="smart-match-view-btn"
+                            onClick={() => handleViewDetails(candidate)}
+                            type="button"
+                          >
+                            <span>View Item</span>
+                            <ExternalLink size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <button className="complaint-submit-button" onClick={() => setSelectedItem(null)} type="button">
               Close
             </button>
