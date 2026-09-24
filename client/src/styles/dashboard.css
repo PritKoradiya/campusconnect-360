@@ -6548,4 +6548,147 @@
   line-height: 1.45;
 }
 
+/* ==========================================================================
+   ADMIN LIVE ANALYTICS STYLES
+   ========================================================================== */
+.live-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.live-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  animation: livePulse 1.8s infinite;
+}
+
+@keyframes livePulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 6px rgba(52, 211, 153, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+  }
+}
+
+.live-filter-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(8, 24, 39, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 8px;
+  padding: 0 10px;
+  min-height: 38px;
+  transition: all 0.2s ease;
+}
+
+.live-filter-select-wrap:focus-within {
+  border-color: #22d3ee;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+}
+
+.live-dept-select {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  padding: 6px 0;
+  max-width: 170px;
+}
+
+.live-dept-select option {
+  background: #0f1e33;
+  color: #ffffff;
+}
+
+.live-auto-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(8, 24, 39, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 8px;
+  padding: 0 12px;
+  min-height: 38px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.live-auto-refresh-btn:hover {
+  border-color: rgba(34, 211, 238, 0.5);
+  color: #ffffff;
+}
+
+.live-auto-refresh-btn.active {
+  background: rgba(34, 211, 238, 0.16);
+  border-color: #22d3ee;
+  color: #22d3ee;
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.25);
+}
+
+.live-icon-pulsing {
+  animation: spin 3s linear infinite;
+  color: #22d3ee;
+}
+
+.live-telemetry-meta-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: rgba(8, 24, 39, 0.55);
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: #94a3b8;
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+
+.live-event-perf-list {
+  display: grid;
+  gap: 12px;
+}
+
+.live-event-perf-card {
+  background: rgba(8, 24, 39, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+  transition: border-color 0.2s ease;
+}
+
+.live-event-perf-card:hover {
+  border-color: rgba(34, 211, 238, 0.35);
+}
+
+
 

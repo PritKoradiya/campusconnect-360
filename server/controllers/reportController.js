@@ -5,6 +5,8 @@ const Notice = require('../models/Notice');
 const Event = require('../models/Event');
 const LostFound = require('../models/LostFound');
 const ComplaintFeedback = require('../models/ComplaintFeedback');
+const EventRegistration = require('../models/EventRegistration');
+const EventAttendance = require('../models/EventAttendance');
 
 const getDateRangeFilter = (range) => {
   const now = new Date();
@@ -15,6 +17,10 @@ const getDateRangeFilter = (range) => {
     }
     case '30d': {
       const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return { createdAt: { $gte: past } };
+    }
+    case '90d': {
+      const past = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
       return { createdAt: { $gte: past } };
     }
     case '6m': {
@@ -308,6 +314,252 @@ const getAdminReports = async (req, res) => {
   }
 };
 
-module.exports = {
-  getAdminReports
+/**
+ * Fetch live analytics for administrative live monitoring.
+ * Supports date range and department filtering, aggregated counts for
+ * complaints, event performance, attendance, lost & found, and satisfaction.
+ *
+ * Route: GET /api/reports/live-analytics
+ * Access: Private (Admin only)
+ */
+const getAdminLiveAnalytics = async (req, res) => {
+  try {
+    const range = req.query.range || '30d';
+    const departmentId = req.query.department || 'all';
+    const dateFilter = getDateRangeFilter(range);
+
+    // Complaint filter
+    const complaintFilter = { ...dateFilter };
+    if (departmentId !== 'all') {
+      complaintFilter.department = departmentId;
+    }
+
+    // Feedback filter
+    const feedbackFilter = { ...dateFilter };
+    if (departmentId !== 'all') {
+      feedbackFilter.department = departmentId;
+    }
+
+    // Concurrent queries for top KPIs and data streams
+    const [
+      totalUsers,
+      totalStudents,
+      complaints,
+      allDepartments,
+      totalEvents,
+      totalRegistrations,
+      totalAttendance,
+      openLostFound,
+      lostFoundRecords,
+      feedbacks,
+      eventsList
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ role: 'student' }),
+      Complaint.find(complaintFilter).populate('department', 'name code').sort({ createdAt: 1 }).lean(),
+      Department.find({ isActive: true }).select('name code').lean(),
+      Event.countDocuments({ isActive: true }),
+      EventRegistration.countDocuments({ status: 'REGISTERED' }),
+      EventAttendance.countDocuments({ checkedIn: true }),
+      LostFound.countDocuments({ status: 'Open' }),
+      LostFound.find(dateFilter).select('type status createdAt').lean(),
+      ComplaintFeedback.find(feedbackFilter).lean(),
+      Event.find({ isActive: true }).sort({ eventDate: -1 }).limit(6).select('title eventDate venue registeredCount').lean()
+    ]);
+
+    // 1. Complaint Status breakdown
+    let pendingCount = 0;
+    let inProgressCount = 0;
+    let resolvedCount = 0;
+    let rejectedCount = 0;
+
+    // 2. Complaint Trend (group by day if <=90d, by month if 1y or all)
+    const trendMap = {};
+    const isDaily = range === '7d' || range === '30d' || range === '90d';
+
+    // 3. Department workload map
+    const deptWorkloadMap = {};
+    allDepartments.forEach((d) => {
+      deptWorkloadMap[d._id.toString()] = {
+        id: d._id,
+        name: d.name,
+        code: d.code,
+        total: 0,
+        pending: 0,
+        inProgress: 0,
+        resolved: 0
+      };
+    });
+
+    complaints.forEach((c) => {
+      const status = c.status || 'Pending';
+      if (status === 'Pending') pendingCount++;
+      else if (status === 'In Progress') inProgressCount++;
+      else if (status === 'Resolved') resolvedCount++;
+      else if (status === 'Rejected') rejectedCount++;
+
+      // Trend
+      if (c.createdAt) {
+        const d = new Date(c.createdAt);
+        if (!isNaN(d.getTime())) {
+          let key;
+          let label;
+          if (isDaily) {
+            key = d.toISOString().slice(0, 10);
+            label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          } else {
+            key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          }
+          if (!trendMap[key]) {
+            trendMap[key] = { key, label, count: 0 };
+          }
+          trendMap[key].count++;
+        }
+      }
+
+      // Department workload
+      if (c.department) {
+        const dId = (c.department._id || c.department).toString();
+        if (deptWorkloadMap[dId]) {
+          deptWorkloadMap[dId].total++;
+          if (status === 'Pending') deptWorkloadMap[dId].pending++;
+          else if (status === 'In Progress') deptWorkloadMap[dId].inProgress++;
+          else if (status === 'Resolved') deptWorkloadMap[dId].resolved++;
+        }
+      }
+    });
+
+    const complaintTrend = Object.values(trendMap).sort((a, b) => a.key.localeCompare(b.key));
+    const departmentWorkload = Object.values(deptWorkloadMap).sort((a, b) => b.total - a.total);
+
+    // 4. Event Performance: Registrations & Attendance for recent active events
+    const eventIds = eventsList.map((e) => e._id);
+    const [regCountsByEvent, attCountsByEvent] = await Promise.all([
+      EventRegistration.aggregate([
+        { $match: { event: { $in: eventIds }, status: 'REGISTERED' } },
+        { $group: { _id: '$event', count: { $sum: 1 } } }
+      ]),
+      EventAttendance.aggregate([
+        { $match: { event: { $in: eventIds }, checkedIn: true } },
+        { $group: { _id: '$event', count: { $sum: 1 } } }
+      ])
+    ]);
+
+    const regMap = {};
+    regCountsByEvent.forEach((r) => {
+      regMap[r._id.toString()] = r.count;
+    });
+    const attMap = {};
+    attCountsByEvent.forEach((a) => {
+      attMap[a._id.toString()] = a.count;
+    });
+
+    const eventPerformance = eventsList.map((e) => {
+      const eId = e._id.toString();
+      const registrations = regMap[eId] !== undefined ? regMap[eId] : (e.registeredCount || 0);
+      const attendance = attMap[eId] || 0;
+      const turnoutRate = registrations > 0 ? Math.round((attendance / registrations) * 100) : 0;
+      return {
+        id: e._id,
+        title: e.title,
+        eventDate: e.eventDate,
+        venue: e.venue,
+        registrations,
+        attendance,
+        turnoutRate
+      };
+    });
+
+    // 5. Lost & Found Breakdown
+    let lfLostCount = 0;
+    let lfFoundCount = 0;
+    let lfOpenCount = 0;
+    let lfClaimedCount = 0;
+    let lfClosedCount = 0;
+
+    lostFoundRecords.forEach((lf) => {
+      if (lf.type === 'Lost') lfLostCount++;
+      else if (lf.type === 'Found') lfFoundCount++;
+
+      if (lf.status === 'Open') lfOpenCount++;
+      else if (lf.status === 'Claimed') lfClaimedCount++;
+      else if (lf.status === 'Closed') lfClosedCount++;
+    });
+
+    // 6. Student Satisfaction
+    let totalRatingSum = 0;
+    const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const resolutionBreakdown = { Yes: 0, Partially: 0, No: 0 };
+
+    feedbacks.forEach((fb) => {
+      totalRatingSum += fb.rating;
+      if (ratingDistribution[fb.rating] !== undefined) ratingDistribution[fb.rating]++;
+      if (resolutionBreakdown[fb.resolutionStatus] !== undefined) resolutionBreakdown[fb.resolutionStatus]++;
+    });
+
+    const totalFeedbackCount = feedbacks.length;
+    const averageRating = totalFeedbackCount > 0 ? Number((totalRatingSum / totalFeedbackCount).toFixed(1)) : 0;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Admin live analytics fetched successfully',
+      data: {
+        generatedAt: new Date().toISOString(),
+        filters: { range, department: departmentId },
+        kpis: {
+          totalUsers,
+          totalStudents,
+          totalComplaints: complaints.length,
+          pendingComplaints: pendingCount,
+          inProgressComplaints: inProgressCount,
+          resolvedComplaints: resolvedCount,
+          rejectedComplaints: rejectedCount,
+          totalEvents,
+          totalRegistrations,
+          totalAttendance,
+          openLostFound,
+          averageFeedbackRating: averageRating
+        },
+        charts: {
+          complaintStatus: {
+            total: complaints.length,
+            pending: pendingCount,
+            inProgress: inProgressCount,
+            resolved: resolvedCount,
+            rejected: rejectedCount
+          },
+          complaintTrend,
+          departmentWorkload,
+          eventPerformance,
+          lostFoundStatus: {
+            total: lostFoundRecords.length,
+            lost: lfLostCount,
+            found: lfFoundCount,
+            open: lfOpenCount,
+            claimed: lfClaimedCount,
+            closed: lfClosedCount
+          },
+          studentSatisfaction: {
+            totalFeedback: totalFeedbackCount,
+            averageRating,
+            ratingDistribution,
+            resolutionBreakdown
+          }
+        }
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Could not fetch admin live analytics',
+      error: error.message
+    });
+  }
 };
+
+module.exports = {
+  getAdminReports,
+  getAdminLiveAnalytics
+};
+

@@ -1,10 +1,5 @@
 import api from './api';
 
-export const getAdminReports = (params) => {
-  return api.get('/reports/admin', { params });
-};
-
 export const getAdminLiveAnalytics = (params) => {
   return api.get('/reports/live-analytics', { params });
 };
-

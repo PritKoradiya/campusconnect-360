@@ -42,6 +42,7 @@ const linksByRole = {
     { label: 'Events', path: '/admin/events', icon: CalendarDays },
     { label: 'Lost & Found', path: '/admin/lost-found', icon: Search },
     { label: 'Calendar', path: '/admin/calendar', icon: Calendar },
+    { label: 'Analytics', path: '/admin/analytics', icon: Activity },
     { label: 'Reports', path: '/admin/reports', icon: BarChart3 }
   ],
   department: [

@@ -4,6 +4,7 @@ import MainLayout from './layouts/MainLayout';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminLiveAnalytics from './pages/admin/AdminLiveAnalytics';
 import AdminReports from './pages/admin/AdminReports';
 import Departments from './pages/admin/Departments';
 import ManageComplaints from './pages/admin/ManageComplaints';
@@ -66,6 +67,7 @@ function App() {
             <Route path="/admin/events/:eventId/attendance" element={<EventAttendance />} />
             <Route path="/admin/lost-found" element={<ManageLostFound />} />
             <Route path="/admin/calendar" element={<AdminCampusCalendar />} />
+            <Route path="/admin/analytics" element={<AdminLiveAnalytics />} />
             <Route path="/admin/reports" element={<AdminReports />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['department']} />}>
