@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
+  Activity,
+  ArrowRight,
   Bell,
   Bot,
   CalendarDays,
@@ -10,12 +13,14 @@ import {
   PackageSearch,
   Search,
   Timer,
+  UserCheck,
   XCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
 import { getStudentDashboard } from '../../services/dashboardService';
+import { getStudentActivityFeed } from '../../services/activityService';
 
 const quickActions = [
   { label: 'Raise Complaint', description: 'Create a new campus service request.', icon: FilePlus },
@@ -59,6 +64,7 @@ const getCountValue = (value) => {
 function StudentDashboard() {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState({});
+  const [recentActivities, setRecentActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -76,9 +82,16 @@ function StudentDashboard() {
         setLoading(true);
         setError('');
 
-        const response = await getStudentDashboard();
-        const summaryData = response.data?.summary || response.data?.data || response.data || {};
+        const [dashRes, actRes] = await Promise.all([
+          getStudentDashboard(),
+          getStudentActivityFeed({ limit: 4 }).catch(() => ({ data: { data: { activities: [] } } }))
+        ]);
+
+        const summaryData = dashRes.data?.summary || dashRes.data?.data || dashRes.data || {};
         setDashboardData(summaryData);
+
+        const feedData = actRes.data?.data?.activities || actRes.data?.activities || [];
+        setRecentActivities(feedData);
       } catch (err) {
         if (err.response?.status === 401) {
           setError('Session expired. Please login again.');
@@ -228,30 +241,73 @@ function StudentDashboard() {
         </AnimatedCard>
       </div>
 
-      <AnimatedCard className="dashboard-panel" delay={0.44} hover={false}>
-        <div className="dashboard-section-heading">
-          <h2>Upcoming Events</h2>
-          <p>Campus events scheduled for students.</p>
-        </div>
-        <ul className="dashboard-list">
-          {upcomingEvents.length > 0 ? (
-            upcomingEvents.map((event, index) => (
-              <li key={event?._id || event?.id || `${getItemText(event, 'Event')}-${index}`}>
+      <div className="dashboard-grid dashboard-two-column">
+        <AnimatedCard className="dashboard-panel" delay={0.44} hover={false}>
+          <div className="dashboard-section-heading">
+            <h2>Upcoming Events</h2>
+            <p>Campus events scheduled for students.</p>
+          </div>
+          <ul className="dashboard-list">
+            {upcomingEvents.length > 0 ? (
+              upcomingEvents.map((event, index) => (
+                <li key={event?._id || event?.id || `${getItemText(event, 'Event')}-${index}`}>
+                  <CalendarDays size={17} />
+                  <span>
+                    {getItemText(event, 'Campus event')}
+                    {getEventDetail(event) && ` - ${getEventDetail(event)}`}
+                  </span>
+                </li>
+              ))
+            ) : (
+              <li>
                 <CalendarDays size={17} />
-                <span>
-                  {getItemText(event, 'Campus event')}
-                  {getEventDetail(event) && ` - ${getEventDetail(event)}`}
-                </span>
+                <span>No upcoming events available.</span>
               </li>
-            ))
-          ) : (
-            <li>
-              <CalendarDays size={17} />
-              <span>No upcoming events available.</span>
-            </li>
-          )}
-        </ul>
-      </AnimatedCard>
+            )}
+          </ul>
+        </AnimatedCard>
+
+        <AnimatedCard className="dashboard-panel" delay={0.48} hover={false}>
+          <div className="dashboard-section-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h2>Recent Activity</h2>
+              <p>Your latest campus actions and history.</p>
+            </div>
+            <Link to="/student/activity" className="activity-nav-btn" style={{ textDecoration: 'none' }}>
+              <span>View All</span>
+              <ArrowRight size={13} />
+            </Link>
+          </div>
+          <ul className="dashboard-list">
+            {recentActivities.length > 0 ? (
+              recentActivities.map((act) => (
+                <li key={act.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <Activity size={16} style={{ color: '#38bdf8', flexShrink: 0 }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {act.title}
+                    </span>
+                  </span>
+                  <span className="dashboard-status" style={{ fontSize: '11px', flexShrink: 0, marginLeft: '8px' }}>
+                    {act.sourceType === 'complaint'
+                      ? 'Complaint'
+                      : act.sourceType === 'event'
+                      ? 'Event'
+                      : act.sourceType === 'lost_found'
+                      ? 'Lost & Found'
+                      : 'Profile'}
+                  </span>
+                </li>
+              ))
+            ) : (
+              <li>
+                <Activity size={17} />
+                <span>No recent activity recorded yet.</span>
+              </li>
+            )}
+          </ul>
+        </AnimatedCard>
+      </div>
     </AnimatedPage>
   );
 }

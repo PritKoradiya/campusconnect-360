@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity,
   AlertCircle,
+  ArrowRight,
   BookOpen,
   Building2,
   Calendar,
+  CalendarCheck,
   Camera,
   CheckCircle2,
   Clock,
@@ -18,6 +20,7 @@ import {
   Lock,
   Mail,
   MapPin,
+  PackageSearch,
   Phone,
   RotateCw,
   Sparkles,
@@ -27,12 +30,14 @@ import {
   Users,
   X
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
 import { useAuth } from '../../context/AuthContext';
 import { getCurrentUser, updateCurrentUserProfile } from '../../services/authService';
 import { getStudentDashboard } from '../../services/dashboardService';
 import { getDepartments } from '../../services/departmentService';
+import { getStudentActivityFeed } from '../../services/activityService';
 import '../../styles/profile.css';
 
 // Preset avatar options for quick selection
@@ -132,10 +137,11 @@ function StudentProfile() {
       }
       setError('');
 
-      const [userRes, dashRes, deptsRes] = await Promise.all([
+      const [userRes, dashRes, deptsRes, actRes] = await Promise.all([
         getCurrentUser(),
         getStudentDashboard().catch(() => ({ data: {} })),
-        getDepartments().catch(() => ({ data: [] }))
+        getDepartments().catch(() => ({ data: [] })),
+        getStudentActivityFeed({ limit: 5 }).catch(() => ({ data: { data: { activities: [] } } }))
       ]);
 
       const freshUser = userRes.data?.user || userRes.data;
@@ -147,7 +153,10 @@ function StudentProfile() {
       const dashData = dashRes.data?.summary || dashRes.data?.data || dashRes.data || {};
       setStats(dashData);
 
-      if (Array.isArray(dashData.recentComplaints)) {
+      const feedActivities = actRes.data?.data?.activities || actRes.data?.activities || [];
+      if (feedActivities.length > 0) {
+        setRecentActivities(feedActivities);
+      } else if (Array.isArray(dashData.recentComplaints)) {
         setRecentActivities(dashData.recentComplaints);
       }
 
@@ -687,19 +696,58 @@ function StudentProfile() {
                 </span>
                 <h2>Recent Student Activity</h2>
               </div>
-              <span className="cal-side-count">{recentActivities.length} items</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span className="cal-side-count">{recentActivities.length} items</span>
+                <Link
+                  to="/student/activity"
+                  className="activity-nav-btn"
+                  style={{ textDecoration: 'none', padding: '4px 10px', fontSize: '12px' }}
+                >
+                  <span>View All</span>
+                  <ArrowRight size={13} />
+                </Link>
+              </div>
             </div>
 
             {recentActivities.length === 0 ? (
               <div className="cal-empty-schedule" style={{ padding: '24px' }}>
-                <p>No recent student activities or complaints submitted yet.</p>
+                <p>No recent student activities or complaints recorded yet.</p>
               </div>
             ) : (
               <div className="profile-activity-list">
                 {recentActivities.map((act) => {
-                  const id = act._id || act.id;
-                  const isResolved = act.status === 'Resolved';
-                  const isInProgress = act.status === 'In Progress';
+                  const id = act.id || act._id;
+                  const isResolved =
+                    act.status === 'Resolved' ||
+                    act.eventType === 'COMPLAINT_RESOLVED' ||
+                    act.eventType === 'EVENT_ATTENDED';
+                  const isInProgress =
+                    act.status === 'In Progress' ||
+                    act.eventType === 'COMPLAINT_IN_PROGRESS' ||
+                    act.eventType === 'COMPLAINT_STATUS_CHANGED';
+
+                  // Determine appropriate icon based on source
+                  const Icon =
+                    act.sourceType === 'event'
+                      ? CalendarCheck
+                      : act.sourceType === 'lost_found'
+                      ? PackageSearch
+                      : act.sourceType === 'profile'
+                      ? UserCheck
+                      : FileText;
+
+                  const badgeLabel =
+                    act.meta?.status ||
+                    act.status ||
+                    (act.sourceType === 'event' ? 'Event' : act.sourceType === 'lost_found' ? 'Lost & Found' : 'Submitted');
+
+                  const subLabel =
+                    act.meta?.departmentName ||
+                    act.department?.name ||
+                    act.meta?.eventName ||
+                    act.meta?.itemName ||
+                    act.department ||
+                    'Campus Portal';
 
                   return (
                     <div className="profile-activity-item" key={id}>
@@ -715,17 +763,17 @@ function StudentProfile() {
                             color: isResolved ? '#34d399' : isInProgress ? '#22d3ee' : '#60a5fa'
                           }}
                         >
-                          <FileText size={16} />
+                          <Icon size={16} />
                         </span>
 
                         <div className="profile-activity-text">
-                          <h4 className="profile-activity-title">{act.title || 'Complaint Request'}</h4>
+                          <h4 className="profile-activity-title">{act.title || 'Student Action'}</h4>
                           <span className="profile-activity-sub">
-                            <span>{act.department?.name || act.department || 'Campus Department'}</span>
+                            <span>{subLabel}</span>
                             <span>•</span>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                               <Clock size={11} />
-                              {formatRelativeTime(act.createdAt)}
+                              {formatRelativeTime(act.timestamp || act.createdAt)}
                             </span>
                           </span>
                         </div>
@@ -740,7 +788,7 @@ function StudentProfile() {
                             : 'priority-medium'
                         }`}
                       >
-                        {act.status || 'Submitted'}
+                        {badgeLabel}
                       </span>
                     </div>
                   );
