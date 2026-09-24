@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Bot, CalendarDays, CheckCircle2, Clock3, ClipboardList, PackageSearch, UserCog, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AnimatedCard from '../../components/ui/AnimatedCard';
@@ -31,6 +32,7 @@ const getDepartmentName = (complaint) => {
 
 function AdminDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -89,7 +91,13 @@ function AdminDashboard() {
   }
 
   if (dashboardData.openLostFoundItems !== undefined) {
-    summaryCards.push({ label: 'Open Lost & Found', value: getCountValue(dashboardData.openLostFoundItems), icon: PackageSearch, tone: 'warning' });
+    summaryCards.push({
+      label: 'Open Lost & Found',
+      value: getCountValue(dashboardData.openLostFoundItems),
+      icon: PackageSearch,
+      tone: 'warning',
+      path: '/admin/lost-found'
+    });
   }
 
   if (dashboardData.totalChatbotQuestions !== undefined) {
@@ -127,7 +135,13 @@ function AdminDashboard() {
           const Icon = card.icon;
 
           return (
-            <AnimatedCard className={`dashboard-stat-card tone-${card.tone}`} delay={0.1 + index * 0.07} key={card.label}>
+            <AnimatedCard
+              className={`dashboard-stat-card tone-${card.tone}`}
+              delay={0.1 + index * 0.07}
+              key={card.label}
+              onClick={card.path ? () => navigate(card.path) : undefined}
+              style={card.path ? { cursor: 'pointer' } : undefined}
+            >
               <span className="dashboard-card-icon">
                 <Icon size={22} />
               </span>

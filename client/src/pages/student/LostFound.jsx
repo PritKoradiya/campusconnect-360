@@ -407,7 +407,11 @@ function LostFound() {
       )}
 
       {!loading && filteredItems.length === 0 && (
-        <AnimatedCard className="dashboard-panel" delay={0.28} hover={false}>No lost or found items available right now.</AnimatedCard>
+        <AnimatedCard className="dashboard-panel" delay={0.28} hover={false}>
+          {showingMyReports
+            ? 'You have not submitted any Lost & Found reports yet.'
+            : 'No lost or found items available right now.'}
+        </AnimatedCard>
       )}
 
       {formOpen && (

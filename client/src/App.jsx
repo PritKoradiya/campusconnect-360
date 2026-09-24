@@ -9,6 +9,7 @@ import Departments from './pages/admin/Departments';
 import ManageComplaints from './pages/admin/ManageComplaints';
 import ManageEvents from './pages/admin/ManageEvents';
 import EventAttendance from './pages/admin/EventAttendance';
+import ManageLostFound from './pages/admin/ManageLostFound';
 import ManageNotices from './pages/admin/ManageNotices';
 import ManageUsers from './pages/admin/ManageUsers';
 import DepartmentComplaints from './pages/department/DepartmentComplaints';
@@ -61,6 +62,7 @@ function App() {
             <Route path="/admin/notices" element={<ManageNotices />} />
             <Route path="/admin/events" element={<ManageEvents />} />
             <Route path="/admin/events/:eventId/attendance" element={<EventAttendance />} />
+            <Route path="/admin/lost-found" element={<ManageLostFound />} />
             <Route path="/admin/calendar" element={<AdminCampusCalendar />} />
             <Route path="/admin/reports" element={<AdminReports />} />
           </Route>

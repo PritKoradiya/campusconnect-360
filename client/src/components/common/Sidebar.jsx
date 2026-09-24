@@ -38,6 +38,7 @@ const linksByRole = {
     { label: 'Departments', path: '/admin/departments', icon: Building2 },
     { label: 'Notices', path: '/admin/notices', icon: Bell },
     { label: 'Events', path: '/admin/events', icon: CalendarDays },
+    { label: 'Lost & Found', path: '/admin/lost-found', icon: Search },
     { label: 'Calendar', path: '/admin/calendar', icon: Calendar },
     { label: 'Reports', path: '/admin/reports', icon: BarChart3 }
   ],

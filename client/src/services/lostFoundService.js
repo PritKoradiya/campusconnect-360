@@ -1,7 +1,7 @@
 import api from './api';
 
-export const getLostFoundItems = () => {
-  return api.get('/lost-found');
+export const getLostFoundItems = (params) => {
+  return api.get('/lost-found', { params });
 };
 
 export const getMyLostFoundItems = () => {

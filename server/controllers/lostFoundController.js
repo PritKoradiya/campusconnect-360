@@ -10,7 +10,8 @@ const allowedStatuses = ['Open', 'Claimed', 'Closed'];
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 const isOwnerOrAdmin = (user, item) => {
-  return user.role === 'admin' || item.user.toString() === user._id.toString();
+  const itemUserId = item.user?._id ? item.user._id.toString() : item.user.toString();
+  return user.role === 'admin' || itemUserId === user._id.toString();
 };
 
 const populateUserFields = (query) => {
@@ -18,7 +19,7 @@ const populateUserFields = (query) => {
 };
 
 const getLostFoundLinkForRole = (role) => {
-  if (role === 'admin') return '/admin/reports';
+  if (role === 'admin') return '/admin/lost-found';
   return '/student/lost-found';
 };
 
@@ -120,13 +121,31 @@ const createLostFoundItem = async (req, res) => {
 
 const getAllActiveLostFoundItems = async (req, res) => {
   try {
+    const filter = {};
+
+    const shouldIncludeClosed =
+      req.user.role === 'admin' ||
+      req.query.includeClosed === 'true' ||
+      req.query.status === 'Closed' ||
+      req.query.status === 'All';
+
+    if (!shouldIncludeClosed) {
+      filter.status = { $ne: 'Closed' };
+    } else if (req.query.status && req.query.status !== 'All') {
+      filter.status = req.query.status;
+    }
+
+    if (req.query.type && req.query.type !== 'All') {
+      filter.type = req.query.type;
+    }
+
     const items = await populateUserFields(
-      LostFound.find({ status: { $ne: 'Closed' } }).sort({ createdAt: -1 })
+      LostFound.find(filter).sort({ createdAt: -1 })
     );
 
     return res.status(200).json({
       success: true,
-      message: 'Active lost/found items fetched successfully',
+      message: 'Lost/found items fetched successfully',
       count: items.length,
       items
     });
@@ -141,7 +160,9 @@ const getAllActiveLostFoundItems = async (req, res) => {
 
 const getMyLostFoundItems = async (req, res) => {
   try {
-    const items = await LostFound.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const items = await populateUserFields(
+      LostFound.find({ user: req.user._id }).sort({ createdAt: -1 })
+    );
 
     return res.status(200).json({
       success: true,
@@ -329,6 +350,13 @@ const updateLostFoundStatus = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'You can update only your own item status'
+      });
+    }
+
+    if (item.status === 'Closed' && status !== 'Closed' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'A closed lost/found report cannot be reopened by students'
       });
     }
 
