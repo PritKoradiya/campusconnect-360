@@ -51,6 +51,11 @@ const complaintSchema = new mongoose.Schema(
     resolvedAt: {
       type: Date
     },
+    feedback: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ComplaintFeedback',
+      default: null
+    },
     timeline: [
       {
         eventType: {
@@ -61,7 +66,8 @@ const complaintSchema = new mongoose.Schema(
             'COMPLAINT_ASSIGNED',
             'COMPLAINT_STATUS_CHANGED',
             'COMPLAINT_REMARK_ADDED',
-            'COMPLAINT_RESOLVED'
+            'COMPLAINT_RESOLVED',
+            'COMPLAINT_FEEDBACK_SUBMITTED'
           ]
         },
         title: {

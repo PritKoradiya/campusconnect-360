@@ -24,3 +24,11 @@ export const updateDepartmentComplaintStatus = (id, data) => {
   return api.put(`/complaints/${id}/status`, data);
 };
 
+export const submitComplaintFeedback = (id, feedbackData) => {
+  return api.post(`/complaints/${id}/feedback`, feedbackData);
+};
+
+export const getComplaintFeedback = (id) => {
+  return api.get(`/complaints/${id}/feedback`);
+};
+

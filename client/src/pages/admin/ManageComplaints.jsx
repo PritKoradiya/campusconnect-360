@@ -19,6 +19,7 @@ import {
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
 import ComplaintTimeline from '../../components/common/ComplaintTimeline';
+import ComplaintFeedbackDisplay from '../../components/common/ComplaintFeedbackDisplay';
 import {
   assignComplaintToDepartment,
   deleteComplaint,
@@ -26,6 +27,7 @@ import {
   getComplaintById,
   updateComplaintStatus
 } from '../../services/adminComplaintService';
+import { getComplaintFeedback } from '../../services/complaintService';
 import { getDepartments } from '../../services/departmentService';
 
 const statusFilterOptions = ['All', 'Pending', 'In Progress', 'Resolved', 'Rejected'];
@@ -133,6 +135,7 @@ function ManageComplaints() {
 
   // Details Modal States
   const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState('Pending');
@@ -281,6 +284,7 @@ function ManageComplaints() {
     const complaintId = complaint._id || complaint.id;
     if (!complaintId) {
       setSelectedComplaint(complaint);
+      setSelectedFeedback(null);
       setNewStatus(complaint.status || 'Pending');
       setAdminRemarksInput(complaint.adminRemarks || '');
       setSelectedDeptId(getDepartmentId(complaint) || '');
@@ -290,17 +294,33 @@ function ManageComplaints() {
     try {
       setModalLoading(true);
       setSelectedComplaint(complaint);
+      setSelectedFeedback(null);
       setNewStatus(complaint.status || 'Pending');
       setAdminRemarksInput(complaint.adminRemarks || '');
       setSelectedDeptId(getDepartmentId(complaint) || '');
       setError('');
 
-      const response = await getComplaintById(complaintId);
+      const [response, feedbackRes] = await Promise.all([
+        getComplaintById(complaintId),
+        complaint.status === 'Resolved'
+          ? getComplaintFeedback(complaintId).catch(() => ({ data: { feedback: null } }))
+          : Promise.resolve({ data: { feedback: null } })
+      ]);
+
       const details = getComplaintDetails(response.data);
       setSelectedComplaint(details);
       setNewStatus(details.status || 'Pending');
       setAdminRemarksInput(details.adminRemarks || '');
       setSelectedDeptId(getDepartmentId(details) || '');
+
+      if (feedbackRes?.data?.feedback) {
+        setSelectedFeedback(feedbackRes.data.feedback);
+      } else if (details.status === 'Resolved' && details.status !== complaint.status) {
+        const freshFb = await getComplaintFeedback(complaintId).catch(() => null);
+        if (freshFb?.data?.feedback) {
+          setSelectedFeedback(freshFb.data.feedback);
+        }
+      }
     } catch (err) {
       if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
@@ -1043,6 +1063,14 @@ function ManageComplaints() {
                   {getRemarks(selectedComplaint, 'department')}
                 </p>
               </div>
+
+              {/* Student Satisfaction Feedback */}
+              <ComplaintFeedbackDisplay
+                complaint={selectedComplaint}
+                feedback={selectedFeedback}
+                loading={modalLoading}
+                isStudent={false}
+              />
 
               {/* Action Section: Update Status & Admin Remarks */}
               <div className="admin-modal-action-box">

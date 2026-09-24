@@ -4,7 +4,14 @@ import { CheckCircle2, Clock3, ClipboardList, Search, Timer, X, XCircle } from '
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
 import ComplaintTimeline from '../../components/common/ComplaintTimeline';
-import { getComplaintById, getMyComplaints } from '../../services/complaintService';
+import ComplaintFeedbackDisplay from '../../components/common/ComplaintFeedbackDisplay';
+import ComplaintFeedbackModal from '../../components/common/ComplaintFeedbackModal';
+import {
+  getComplaintById,
+  getMyComplaints,
+  getComplaintFeedback,
+  submitComplaintFeedback
+} from '../../services/complaintService';
 
 const statusOptions = ['All', 'Pending', 'In Progress', 'Resolved', 'Rejected'];
 const categoryOptions = ['All', 'Maintenance', 'IT Support', 'Library', 'Examination', 'Administration', 'Other'];
@@ -71,6 +78,12 @@ function MyComplaints() {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [complaints, setComplaints] = useState([]);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
+  const [feedbackSuccessToast, setFeedbackSuccessToast] = useState('');
   const [loading, setLoading] = useState(true);
   const [modalLoading, setModalLoading] = useState(false);
   const [error, setError] = useState('');
@@ -129,20 +142,67 @@ function MyComplaints() {
 
     if (!complaintId) {
       setSelectedComplaint(complaint);
+      setSelectedFeedback(null);
       return;
     }
 
     try {
       setModalLoading(true);
       setSelectedComplaint(complaint);
+      setSelectedFeedback(null);
+      setFeedbackError('');
 
-      const response = await getComplaintById(complaintId);
-      setSelectedComplaint(getComplaintDetails(response.data));
+      const [complaintRes, feedbackRes] = await Promise.all([
+        getComplaintById(complaintId),
+        complaint.status === 'Resolved'
+          ? getComplaintFeedback(complaintId).catch(() => ({ data: { feedback: null } }))
+          : Promise.resolve({ data: { feedback: null } })
+      ]);
+
+      const details = getComplaintDetails(complaintRes.data);
+      setSelectedComplaint(details);
+
+      if (feedbackRes?.data?.feedback) {
+        setSelectedFeedback(feedbackRes.data.feedback);
+      } else if (details.status === 'Resolved' && details.status !== complaint.status) {
+        const freshFb = await getComplaintFeedback(complaintId).catch(() => null);
+        if (freshFb?.data?.feedback) {
+          setSelectedFeedback(freshFb.data.feedback);
+        }
+      }
     } catch (err) {
       setSelectedComplaint(complaint);
       setError(err.response?.data?.message || 'Failed to load complaint details');
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleSubmitFeedback = async (feedbackData) => {
+    const complaintId = selectedComplaint?._id || selectedComplaint?.id;
+    if (!complaintId) return;
+
+    try {
+      setFeedbackSubmitting(true);
+      setFeedbackError('');
+
+      const res = await submitComplaintFeedback(complaintId, feedbackData);
+      const savedFb = res.data?.feedback;
+      setSelectedFeedback(savedFb);
+      setFeedbackModalOpen(false);
+      setFeedbackSuccessToast('Feedback submitted successfully.');
+
+      // Refresh complaint details to show the updated timeline event
+      const updatedComplaintRes = await getComplaintById(complaintId);
+      setSelectedComplaint(getComplaintDetails(updatedComplaintRes.data));
+
+      setTimeout(() => {
+        setFeedbackSuccessToast('');
+      }, 4000);
+    } catch (err) {
+      setFeedbackError(err.response?.data?.message || 'Failed to submit feedback');
+    } finally {
+      setFeedbackSubmitting(false);
     }
   };
 
@@ -302,6 +362,14 @@ function MyComplaints() {
               <p><span>Resolved date</span>{formatDate(selectedComplaint.resolvedAt || selectedComplaint.resolvedDate)}</p>
             </div>
 
+            <ComplaintFeedbackDisplay
+              complaint={selectedComplaint}
+              feedback={selectedFeedback}
+              loading={modalLoading || feedbackLoading}
+              isStudent={true}
+              onOpenFeedbackModal={() => setFeedbackModalOpen(true)}
+            />
+
             <ComplaintTimeline
               complaintId={selectedComplaint._id || selectedComplaint.id}
               initialTimeline={selectedComplaint.timeline}
@@ -313,6 +381,42 @@ function MyComplaints() {
             </button>
           </motion.div>
         </motion.div>
+      )}
+
+      {/* Student Satisfaction Feedback Modal */}
+      <ComplaintFeedbackModal
+        isOpen={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+        onSubmit={handleSubmitFeedback}
+        complaintTitle={selectedComplaint?.title}
+        initialFeedback={selectedFeedback}
+        loading={feedbackSubmitting}
+        error={feedbackError}
+      />
+
+      {/* Success Toast */}
+      {feedbackSuccessToast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            background: 'rgba(16, 185, 129, 0.95)',
+            color: '#ffffff',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '13.5px',
+            fontWeight: 500,
+            zIndex: 1200
+          }}
+        >
+          <CheckCircle2 size={18} />
+          <span>{feedbackSuccessToast}</span>
+        </div>
       )}
     </AnimatedPage>
   );

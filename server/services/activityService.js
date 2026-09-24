@@ -59,6 +59,9 @@ const extractComplaintActivities = (complaint) => {
           case 'COMPLAINT_RESOLVED':
             actionTitle = 'Complaint Resolved';
             break;
+          case 'COMPLAINT_FEEDBACK_SUBMITTED':
+            actionTitle = 'Submitted Resolution Feedback';
+            break;
           default:
             actionTitle = 'Complaint Updated';
         }

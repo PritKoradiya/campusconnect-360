@@ -11,12 +11,17 @@ import {
   CheckCircle2,
   ClipboardList,
   Clock3,
+  Filter,
+  HeartHandshake,
+  MessageSquare,
   PackageSearch,
   PieChart,
   RefreshCcw,
   RotateCcw,
   Search,
   Sparkles,
+  Star,
+  ThumbsUp,
   Timer,
   TrendingUp,
   UserCheck,
@@ -41,6 +46,8 @@ function AdminReports() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [feedbackRatingFilter, setFeedbackRatingFilter] = useState('all');
+  const [feedbackResolutionFilter, setFeedbackResolutionFilter] = useState('all');
 
   const fetchReports = async (range = selectedRange, isManual = false) => {
     const token = localStorage.getItem('token');
@@ -122,6 +129,33 @@ function AdminReports() {
   const maxCatCount = Math.max(...complaintsByCat.map((c) => c.count), 1);
   const maxPriCount = Math.max(...complaintsByPri.map((p) => p.count), 1);
   const maxTrendCount = Math.max(...monthlyTrend.map((m) => m.count), 1);
+
+  // Student Satisfaction Analytics
+  const satisfaction = reportData?.satisfaction || {};
+  const totalFeedback = satisfaction.totalFeedback || 0;
+  const feedbackRate = satisfaction.feedbackRate || 0;
+  const averageRating = satisfaction.averageRating || 0;
+  const ratingDistribution = satisfaction.ratingDistribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const resolutionBreakdown = satisfaction.resolutionBreakdown || { Yes: 0, Partially: 0, No: 0 };
+  const departmentSatisfaction = satisfaction.departmentSatisfaction || [];
+  const recentFeedback = satisfaction.recentFeedback || [];
+
+  const yesCount = resolutionBreakdown.Yes || 0;
+  const partiallyCount = resolutionBreakdown.Partially || 0;
+  const noCount = resolutionBreakdown.No || 0;
+  const positiveResolutionPct = totalFeedback > 0 ? Math.round(((yesCount + partiallyCount * 0.5) / totalFeedback) * 100) : 0;
+
+  const filteredFeedback = recentFeedback.filter((fb) => {
+    if (feedbackRatingFilter !== 'all' && fb.rating !== Number(feedbackRatingFilter)) return false;
+    if (feedbackResolutionFilter !== 'all' && fb.resolutionStatus !== feedbackResolutionFilter) return false;
+    return true;
+  });
+
+  const formatFeedbackDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   return (
     <AnimatedPage>
@@ -741,6 +775,318 @@ function AdminReports() {
           )}
         </AnimatedCard>
       </div>
+
+      {/* 7. Student Satisfaction & Resolution Feedback Section */}
+      {!loading && reportData && (
+        <AnimatedCard className="dashboard-panel" delay={0.62} hover={false} style={{ marginTop: '20px' }}>
+          <div className="chart-card-header" style={{ marginBottom: '16px' }}>
+            <div>
+              <h3 className="chart-card-title">
+                <Star color="#f59e0b" fill="#f59e0b" size={18} />
+                Student Satisfaction &amp; Resolution Feedback
+              </h3>
+              <p className="chart-card-subtitle">
+                Direct student feedback, ratings, and resolution perception for resolved complaints.
+              </p>
+            </div>
+            <span className="chart-pill-badge" style={{ borderColor: 'rgba(245, 158, 11, 0.4)', color: '#fbbf24' }}>
+              ★ {averageRating > 0 ? averageRating.toFixed(1) : '0.0'} Avg Rating
+            </span>
+          </div>
+
+          {/* Satisfaction KPI Row */}
+          <div className="satisfaction-stats-grid">
+            <div className="satisfaction-kpi-card">
+              <span className="satisfaction-kpi-icon tone-amber">
+                <Star fill="#fbbf24" size={20} />
+              </span>
+              <div className="satisfaction-kpi-info">
+                <p>Average Rating</p>
+                <strong>{averageRating > 0 ? `${averageRating.toFixed(1)} / 5.0` : 'No ratings'}</strong>
+              </div>
+            </div>
+
+            <div className="satisfaction-kpi-card">
+              <span className="satisfaction-kpi-icon tone-cyan">
+                <MessageSquare size={20} />
+              </span>
+              <div className="satisfaction-kpi-info">
+                <p>Total Feedback</p>
+                <strong>{totalFeedback}</strong>
+              </div>
+            </div>
+
+            <div className="satisfaction-kpi-card">
+              <span className="satisfaction-kpi-icon tone-emerald">
+                <ThumbsUp size={20} />
+              </span>
+              <div className="satisfaction-kpi-info">
+                <p>Feedback Rate</p>
+                <strong>{feedbackRate}%</strong>
+              </div>
+            </div>
+
+            <div className="satisfaction-kpi-card">
+              <span className="satisfaction-kpi-icon tone-purple">
+                <HeartHandshake size={20} />
+              </span>
+              <div className="satisfaction-kpi-info">
+                <p>Resolution Sentiment</p>
+                <strong>{positiveResolutionPct}% Positive</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Rating Breakdown & Issue Resolution Perception */}
+          <div className="satisfaction-two-col">
+            {/* Rating Distribution */}
+            <div className="reports-chart-card" style={{ padding: '16px' }}>
+              <h4 style={{ margin: '0 0 14px 0', fontSize: '15px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Star color="#f59e0b" size={16} /> Rating Breakdown
+              </h4>
+              <div className="analytics-bar-list">
+                {[5, 4, 3, 2, 1].map((stars) => {
+                  const count = ratingDistribution[stars] || 0;
+                  const pct = totalFeedback > 0 ? Math.round((count / totalFeedback) * 100) : 0;
+                  return (
+                    <div className="analytics-bar-item" key={stars}>
+                      <div className="analytics-bar-label-row">
+                        <span className="analytics-bar-label" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {stars} <Star fill="#fbbf24" color="#fbbf24" size={12} />
+                        </span>
+                        <span className="analytics-bar-value" style={{ color: '#fbbf24' }}>
+                          {count} ({pct}%)
+                        </span>
+                      </div>
+                      <div className="analytics-bar-track">
+                        <div
+                          className="analytics-bar-fill"
+                          style={{
+                            width: `${pct}%`,
+                            background: 'linear-gradient(90deg, #d97706, #fbbf24)'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Issue Resolution Perception */}
+            <div className="reports-chart-card" style={{ padding: '16px' }}>
+              <h4 style={{ margin: '0 0 14px 0', fontSize: '15px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle2 color="#22d3ee" size={16} /> Issue Resolution Perception
+              </h4>
+              <p style={{ margin: '0 0 12px 0', fontSize: '12.5px', color: '#94a3b8' }}>
+                Student answers to "Was your issue resolved?"
+              </p>
+              <div className="analytics-bar-list">
+                {[
+                  { label: 'Yes (Fully Resolved)', key: 'Yes', color: 'linear-gradient(90deg, #059669, #34d399)' },
+                  { label: 'Partially Resolved', key: 'Partially', color: 'linear-gradient(90deg, #d97706, #fbbf24)' },
+                  { label: 'No (Unresolved)', key: 'No', color: 'linear-gradient(90deg, #dc2626, #f87171)' }
+                ].map((item) => {
+                  const count = resolutionBreakdown[item.key] || 0;
+                  const pct = totalFeedback > 0 ? Math.round((count / totalFeedback) * 100) : 0;
+                  return (
+                    <div className="analytics-bar-item" key={item.key}>
+                      <div className="analytics-bar-label-row">
+                        <span className="analytics-bar-label">{item.label}</span>
+                        <span className="analytics-bar-value" style={{ color: '#ffffff' }}>
+                          {count} ({pct}%)
+                        </span>
+                      </div>
+                      <div className="analytics-bar-track">
+                        <div
+                          className="analytics-bar-fill"
+                          style={{
+                            width: `${pct}%`,
+                            background: item.color
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Department Satisfaction Overview */}
+          <div style={{ marginTop: '10px', marginBottom: '20px' }}>
+            <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Building2 color="#38bdf8" size={16} /> Department Satisfaction Summary
+            </h4>
+            <p style={{ margin: '0 0 12px 0', fontSize: '12px', color: '#94a3b8' }}>
+              Feedback averages across campus departments to support continuous improvement.
+            </p>
+
+            {departmentSatisfaction.length === 0 ? (
+              <div className="track-empty-state" style={{ marginTop: '8px' }}>
+                <p style={{ margin: 0, color: '#94a3b8' }}>No department feedback recorded yet.</p>
+              </div>
+            ) : (
+              <div className="track-table-wrap" style={{ marginTop: '8px' }}>
+                <table className="track-table">
+                  <thead>
+                    <tr>
+                      <th>Department</th>
+                      <th>Feedback Count</th>
+                      <th>Average Rating</th>
+                      <th>Satisfaction Level</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {departmentSatisfaction.map((dept) => {
+                      const rating = dept.averageRating || 0;
+                      let badgeClass = 'status-pending';
+                      let label = 'Moderate';
+                      if (rating >= 4.0) {
+                        badgeClass = 'status-resolved';
+                        label = 'High Satisfaction';
+                      } else if (rating < 3.0) {
+                        badgeClass = 'status-rejected';
+                        label = 'Needs Attention';
+                      }
+
+                      return (
+                        <tr key={dept.department}>
+                          <td style={{ fontWeight: 650, color: '#ffffff' }}>{dept.department}</td>
+                          <td>{dept.feedbackCount} responses</td>
+                          <td>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#fbbf24', fontWeight: 700 }}>
+                              <Star fill="#fbbf24" size={14} /> {rating.toFixed(1)} / 5.0
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`track-badge ${badgeClass}`}>{label}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Recent Student Feedback Review Feed */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '15px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MessageSquare color="#22d3ee" size={16} /> Recent Student Feedback Feed
+                </h4>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                  Verified reviews and comments from authenticated students.
+                </p>
+              </div>
+            </div>
+
+            {/* Filter Pills */}
+            <div className="satisfaction-filter-bar">
+              <div className="satisfaction-filter-group">
+                <span className="satisfaction-filter-label">Rating:</span>
+                {['all', '5', '4', '3', '2', '1'].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    className={`satisfaction-filter-btn ${feedbackRatingFilter === r ? 'active' : ''}`}
+                    onClick={() => setFeedbackRatingFilter(r)}
+                  >
+                    {r === 'all' ? 'All' : `${r}★`}
+                  </button>
+                ))}
+              </div>
+
+              <div className="satisfaction-filter-group">
+                <span className="satisfaction-filter-label">Resolved?:</span>
+                {['all', 'Yes', 'Partially', 'No'].map((res) => (
+                  <button
+                    key={res}
+                    type="button"
+                    className={`satisfaction-filter-btn ${feedbackResolutionFilter === res ? 'active' : ''}`}
+                    onClick={() => setFeedbackResolutionFilter(res)}
+                  >
+                    {res === 'all' ? 'All' : res}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Feed Cards */}
+            {filteredFeedback.length === 0 ? (
+              <div className="track-empty-state">
+                <p style={{ margin: 0, color: '#94a3b8' }}>
+                  {recentFeedback.length === 0
+                    ? 'No student feedback submitted yet for this period.'
+                    : 'No feedback matches the selected filters.'}
+                </p>
+              </div>
+            ) : (
+              <div className="satisfaction-feedback-feed">
+                {filteredFeedback.map((fb) => (
+                  <div className="satisfaction-feedback-card" key={fb.id}>
+                    <div className="satisfaction-card-header">
+                      <div>
+                        <strong style={{ color: '#ffffff', fontSize: '14.5px' }}>{fb.complaintTitle}</strong>
+                        <div className="satisfaction-card-meta" style={{ marginTop: '4px' }}>
+                          <span className="track-badge status-in-progress" style={{ fontSize: '11px', padding: '1px 8px' }}>
+                            {fb.complaintCategory}
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                            Dept: <strong style={{ color: '#cbd5e1' }}>{fb.departmentName}</strong>
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#64748b' }}>•</span>
+                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                            By {fb.studentName} on {formatFeedbackDate(fb.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              size={14}
+                              fill={star <= fb.rating ? '#fbbf24' : 'transparent'}
+                              color={star <= fb.rating ? '#fbbf24' : '#475569'}
+                            />
+                          ))}
+                        </div>
+                        <span
+                          className={`track-badge ${
+                            fb.resolutionStatus === 'Yes'
+                              ? 'status-resolved'
+                              : fb.resolutionStatus === 'Partially'
+                              ? 'status-pending'
+                              : 'status-rejected'
+                          }`}
+                          style={{ fontSize: '11.5px', padding: '2px 8px' }}
+                        >
+                          Resolved: {fb.resolutionStatus}
+                        </span>
+                      </div>
+                    </div>
+
+                    {fb.comment ? (
+                      <div className="satisfaction-comment-box">
+                        "{fb.comment}"
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>
+                        No written comment provided.
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </AnimatedCard>
+      )}
 
       {/* Additional Ecosystem Breakdown Card */}
       {!loading && reportData && (

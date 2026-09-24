@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Notice = require('../models/Notice');
 const Event = require('../models/Event');
 const LostFound = require('../models/LostFound');
+const ComplaintFeedback = require('../models/ComplaintFeedback');
 
 const getDateRangeFilter = (range) => {
   const now = new Date();
@@ -188,6 +189,57 @@ const getAdminReports = async (req, res) => {
       LostFound.countDocuments({ status: 'Closed' })
     ]);
 
+    // 11. Student Satisfaction & Feedback Analytics
+    const feedbacks = await ComplaintFeedback.find(dateFilter)
+      .populate('complaint', 'title category priority status')
+      .populate('department', 'name code')
+      .populate('student', 'name enrollmentNo')
+      .sort({ createdAt: -1 });
+
+    const totalFeedback = feedbacks.length;
+    let totalRatingSum = 0;
+    const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const resolutionBreakdown = { Yes: 0, Partially: 0, No: 0 };
+    const deptFbMap = {};
+
+    feedbacks.forEach((fb) => {
+      totalRatingSum += fb.rating;
+      if (ratingDistribution[fb.rating] !== undefined) {
+        ratingDistribution[fb.rating]++;
+      }
+      if (resolutionBreakdown[fb.resolutionStatus] !== undefined) {
+        resolutionBreakdown[fb.resolutionStatus]++;
+      }
+
+      const deptName = fb.department?.name || 'Unassigned';
+      if (!deptFbMap[deptName]) {
+        deptFbMap[deptName] = { department: deptName, feedbackCount: 0, sumRating: 0 };
+      }
+      deptFbMap[deptName].feedbackCount++;
+      deptFbMap[deptName].sumRating += fb.rating;
+    });
+
+    const averageRating = totalFeedback > 0 ? Number((totalRatingSum / totalFeedback).toFixed(1)) : 0;
+    const feedbackRate = resolvedComplaints > 0 ? Math.round((totalFeedback / resolvedComplaints) * 100) : 0;
+
+    const departmentSatisfaction = Object.values(deptFbMap).map((d) => ({
+      department: d.department,
+      feedbackCount: d.feedbackCount,
+      averageRating: Number((d.sumRating / d.feedbackCount).toFixed(1))
+    })).sort((a, b) => b.feedbackCount - a.feedbackCount);
+
+    const recentFeedback = feedbacks.slice(0, 15).map((fb) => ({
+      id: fb._id,
+      complaintTitle: fb.complaint?.title || 'Complaint',
+      complaintCategory: fb.complaint?.category || 'General',
+      departmentName: fb.department?.name || 'Unassigned',
+      studentName: fb.student?.name || 'Student',
+      rating: fb.rating,
+      resolutionStatus: fb.resolutionStatus,
+      comment: fb.comment,
+      createdAt: fb.createdAt
+    }));
+
     return res.status(200).json({
       success: true,
       message: 'Admin reports and analytics fetched successfully',
@@ -235,6 +287,15 @@ const getAdminReports = async (req, res) => {
           open: openLF,
           claimed: claimedLF,
           closed: closedLF
+        },
+        satisfaction: {
+          totalFeedback,
+          feedbackRate,
+          averageRating,
+          ratingDistribution,
+          resolutionBreakdown,
+          departmentSatisfaction,
+          recentFeedback
         }
       }
     });

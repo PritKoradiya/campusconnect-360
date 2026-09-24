@@ -11,6 +11,7 @@ import {
   AlertCircle,
   ArrowUpDown,
   RefreshCw,
+  Star,
   User,
   ShieldCheck
 } from 'lucide-react';
@@ -40,6 +41,16 @@ function formatTimelineDateTime(dateValue) {
 function getEventConfig(event) {
   const type = event.eventType;
   const status = (event.status || '').toLowerCase();
+
+  if (type === 'COMPLAINT_FEEDBACK_SUBMITTED') {
+    return {
+      icon: Star,
+      badgeClass: 'status-feedback',
+      dotClass: 'timeline-dot-feedback',
+      accentColor: '#f59e0b',
+      label: 'Feedback'
+    };
+  }
 
   if (type === 'COMPLAINT_RESOLVED' || status === 'resolved') {
     return {

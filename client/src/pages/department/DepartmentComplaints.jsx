@@ -14,10 +14,12 @@ import {
 } from 'lucide-react';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedPage from '../../components/ui/AnimatedPage';
+import ComplaintFeedbackDisplay from '../../components/common/ComplaintFeedbackDisplay';
 import { useAuth } from '../../context/AuthContext';
 import {
   getComplaintById,
-  getDepartmentComplaints
+  getDepartmentComplaints,
+  getComplaintFeedback
 } from '../../services/complaintService';
 
 const statusFilterOptions = ['All', 'Pending', 'In Progress', 'Resolved', 'Rejected'];
@@ -91,6 +93,7 @@ function DepartmentComplaints() {
 
   // View Details Modal State (Read-Only)
   const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
 
   const fetchComplaints = async (isManualRefresh = false) => {
@@ -198,17 +201,34 @@ function DepartmentComplaints() {
     const id = complaint._id || complaint.id;
     if (!id) {
       setSelectedComplaint(complaint);
+      setSelectedFeedback(null);
       return;
     }
 
     try {
       setModalLoading(true);
       setSelectedComplaint(complaint);
+      setSelectedFeedback(null);
       setError('');
 
-      const response = await getComplaintById(id);
+      const [response, feedbackRes] = await Promise.all([
+        getComplaintById(id),
+        complaint.status === 'Resolved'
+          ? getComplaintFeedback(id).catch(() => ({ data: { feedback: null } }))
+          : Promise.resolve({ data: { feedback: null } })
+      ]);
+
       const details = getComplaintDetails(response.data);
       setSelectedComplaint(details);
+
+      if (feedbackRes?.data?.feedback) {
+        setSelectedFeedback(feedbackRes.data.feedback);
+      } else if (details.status === 'Resolved' && details.status !== complaint.status) {
+        const freshFb = await getComplaintFeedback(id).catch(() => null);
+        if (freshFb?.data?.feedback) {
+          setSelectedFeedback(freshFb.data.feedback);
+        }
+      }
     } catch (err) {
       if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
@@ -643,6 +663,14 @@ function DepartmentComplaints() {
                   </p>
                 )}
               </div>
+
+              {/* Student Satisfaction Feedback */}
+              <ComplaintFeedbackDisplay
+                complaint={selectedComplaint}
+                feedback={selectedFeedback}
+                loading={modalLoading}
+                isStudent={false}
+              />
 
               {/* Modal Footer Controls (View-Only / Close Only) */}
               <div className="admin-modal-footer" style={{ justifyContent: 'flex-end' }}>
