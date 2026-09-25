@@ -49,6 +49,20 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/students/me/achievements', achievementRoutes);
 
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'CampusConnect 360 API is running'
+  });
+});
+
+app.get('/api', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'CampusConnect 360 API is running'
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
@@ -64,6 +78,10 @@ app.get('/api/db-test', (req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`CampusConnect 360 API running on port ${PORT}`);
-});
+if (require.main === module && !process.env.VERCEL) {
+  server.listen(PORT, () => {
+    console.log(`CampusConnect 360 API running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
