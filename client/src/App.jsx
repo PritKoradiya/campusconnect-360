@@ -32,10 +32,14 @@ import StudentAchievements from './pages/student/StudentAchievements';
 import StudentActivityFeed from './pages/student/StudentActivityFeed';
 import SubmitComplaint from './pages/student/SubmitComplaint';
 import NotificationsPage from './pages/notifications/NotificationsPage';
+import PwaStatusBanner from './components/common/PwaStatusBanner';
+import PwaInstallPrompt from './components/common/PwaInstallPrompt';
 
 function App() {
   return (
     <BrowserRouter>
+      <PwaStatusBanner />
+      <PwaInstallPrompt />
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />

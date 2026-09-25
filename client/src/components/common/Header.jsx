@@ -1,14 +1,16 @@
 import { motion } from 'framer-motion';
-import { LogOut, UserRound } from 'lucide-react';
+import { Download, LogOut, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import { useAuth } from '../../context/AuthContext';
+import { usePwa } from '../../context/PwaContext';
 import NotificationBell from './NotificationBell';
 import { disconnectSocket } from '../../services/socket';
 
 function Header() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const { canInstall, installApp } = usePwa();
 
   const handleLogout = () => {
     disconnectSocket();
@@ -40,6 +42,20 @@ function Header() {
         </div>
       </motion.div>
       <div className="header-actions">
+        {canInstall && (
+          <motion.button
+            aria-label="Install CampusConnect 360 App"
+            className="header-install-btn"
+            onClick={installApp}
+            title="Install CampusConnect App"
+            type="button"
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Download size={15} />
+            <span>Install App</span>
+          </motion.button>
+        )}
         {user && <NotificationBell />}
         <motion.div
           className="header-user"

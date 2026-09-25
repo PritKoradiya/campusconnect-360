@@ -40,4 +40,6 @@ const noticeSchema = new mongoose.Schema(
   }
 );
 
+noticeSchema.index({ isActive: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Notice', noticeSchema);

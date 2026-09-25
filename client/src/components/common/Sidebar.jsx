@@ -33,7 +33,7 @@ const linksByRole = {
     { label: 'My Registrations', path: '/student/my-registrations', icon: CalendarCheck },
     { label: 'Campus Calendar', path: '/student/calendar', icon: Calendar },
     { label: 'Lost & Found', path: '/student/lost-found', icon: Search },
-    { label: 'AI Chatbot', path: '/student/chatbot', icon: Bot }
+    { label: '🤖 AI Campus Assistant', path: '/student/chatbot', icon: Bot }
   ],
   admin: [
     { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },

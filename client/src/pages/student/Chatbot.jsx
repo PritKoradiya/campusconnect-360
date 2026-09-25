@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertCircle,
   Bot,
+  Check,
   CheckCircle2,
+  Copy,
   CornerDownLeft,
   MessageSquare,
   RotateCcw,
@@ -22,14 +24,17 @@ import {
 } from '../../services/chatbotService';
 
 const WELCOME_TEXT =
-  "Hello! I'm the CampusConnect AI Assistant. I can help you with complaints, complaint tracking, notices, events, lost & found, and other student support questions.";
+  "Hello! I am your 🤖 AI Campus Assistant. Ask me anything—from general questions like programming, algorithms, and React, to your personal campus complaints, event registrations, attendance, and profile details!";
 
 const SUGGESTED_QUESTIONS = [
-  'How to submit complaint?',
-  'How can I track my complaint?',
-  'Where can I check notices?',
+  'How many pending complaints do I have?',
+  'What events am I registered for?',
+  'How many events have I attended?',
   'What are the upcoming events?',
-  'How to report a lost item?'
+  'What is my profile information?',
+  'What is recursion?',
+  'Explain React hooks with an example.',
+  'Write a C program for binary search.'
 ];
 
 function formatTime(dateValue) {
@@ -42,6 +47,201 @@ function formatTime(dateValue) {
   } catch {
     return '';
   }
+}
+
+/**
+ * Helper component to render code block with copy action safely without raw HTML.
+ */
+function CodeBlock({ code, language }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div style={{ position: 'relative', margin: '10px 0' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: '#040d16',
+          padding: '6px 12px',
+          borderTopLeftRadius: '8px',
+          borderTopRightRadius: '8px',
+          border: '1px solid rgba(56, 189, 248, 0.25)',
+          borderBottom: 'none',
+          fontSize: '11px',
+          color: '#94a3b8',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em'
+        }}
+      >
+        <span>{language || 'Code'}</span>
+        <button
+          onClick={handleCopy}
+          type="button"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: copied ? '#4ade80' : '#38bdf8',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '11px'
+          }}
+          title="Copy code"
+        >
+          {copied ? <Check size={13} /> : <Copy size={13} />}
+          <span>{copied ? 'Copied' : 'Copy'}</span>
+        </button>
+      </div>
+      <pre
+        style={{
+          margin: 0,
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0
+        }}
+      >
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+/**
+ * Safely parse inline formatting (bold `**text**` and inline code `` `code` ``) into React elements.
+ */
+function parseInlineFormatting(text) {
+  if (!text) return null;
+
+  // Split by inline code first
+  const codeParts = text.split(/(`[^`]+`)/g);
+
+  return codeParts.map((part, pIdx) => {
+    if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+      return (
+        <code key={`code-${pIdx}`}>{part.slice(1, -1)}</code>
+      );
+    }
+
+    // Split by bold (**bold**)
+    const boldParts = part.split(/(\*\*[^*]+\*\*)/g);
+    return boldParts.map((bPart, bIdx) => {
+      if (bPart.startsWith('**') && bPart.endsWith('**') && bPart.length > 4) {
+        return (
+          <strong key={`b-${pIdx}-${bIdx}`}>{bPart.slice(2, -2)}</strong>
+        );
+      }
+      return bPart;
+    });
+  });
+}
+
+/**
+ * Safely formats AI text without dangerouslySetInnerHTML.
+ * Supports: code blocks (```lang ... ```), lists (*, -, 1.), bold (**), inline code.
+ */
+function FormattedMessage({ text }) {
+  if (!text) return null;
+
+  // Split content by code fences
+  const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+  const blocks = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      blocks.push({
+        type: 'text',
+        content: text.substring(lastIndex, match.index)
+      });
+    }
+    blocks.push({
+      type: 'code',
+      language: match[1] || '',
+      content: match[2].trimEnd()
+    });
+    lastIndex = codeBlockRegex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    blocks.push({
+      type: 'text',
+      content: text.substring(lastIndex)
+    });
+  }
+
+  return (
+    <div>
+      {blocks.map((block, idx) => {
+        if (block.type === 'code') {
+          return (
+            <CodeBlock
+              code={block.content}
+              key={`block-${idx}`}
+              language={block.language}
+            />
+          );
+        }
+
+        // Parse paragraphs and bullet/numbered lists
+        const paragraphs = block.content.split(/\n\s*\n/);
+
+        return (
+          <div key={`block-${idx}`}>
+            {paragraphs.map((para, pIdx) => {
+              const lines = para.trim().split('\n');
+
+              // Check if paragraph is a list
+              const isBulletList = lines.length > 0 && lines.every((l) => /^\s*[-*•]\s+/.test(l));
+              const isNumberedList = lines.length > 0 && lines.every((l) => /^\s*\d+\.\s+/.test(l));
+
+              if (isBulletList) {
+                return (
+                  <ul key={`ul-${pIdx}`} style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    {lines.map((line, lIdx) => (
+                      <li key={`li-${lIdx}`}>
+                        {parseInlineFormatting(line.replace(/^\s*[-*•]\s+/, ''))}
+                      </li>
+                    ))}
+                  </ul>
+                );
+              }
+
+              if (isNumberedList) {
+                return (
+                  <ol key={`ol-${pIdx}`} style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    {lines.map((line, lIdx) => (
+                      <li key={`li-${lIdx}`}>
+                        {parseInlineFormatting(line.replace(/^\s*\d+\.\s+/, ''))}
+                      </li>
+                    ))}
+                  </ol>
+                );
+              }
+
+              return (
+                <p key={`p-${pIdx}`} style={{ margin: pIdx > 0 ? '8px 0 0 0' : 0 }}>
+                  {lines.map((line, lIdx) => (
+                    <span key={`line-${lIdx}`}>
+                      {parseInlineFormatting(line)}
+                      {lIdx < lines.length - 1 && <br />}
+                    </span>
+                  ))}
+                </p>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function Chatbot() {
@@ -188,6 +388,8 @@ function Chatbot() {
     } catch (err) {
       if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
+      } else if (err.response?.status === 429) {
+        setError(err.response?.data?.message || 'AI usage limit reached. Please try again later.');
       } else {
         setError(
           err.response?.data?.message || 'Something went wrong. Please try again.'
@@ -248,10 +450,10 @@ function Chatbot() {
       {/* Top Hero Section */}
       <AnimatedCard className="dashboard-hero" delay={0.05} hover={false}>
         <div>
-          <p className="dashboard-kicker">AI Campus Support</p>
-          <h1>AI Campus Assistant</h1>
+          <p className="dashboard-kicker">CampusConnect 360</p>
+          <h1>🤖 AI Campus Assistant</h1>
           <p>
-            Ask questions about complaints, notices, events, lost &amp; found, and student support.
+            Ask general questions about programming, computer science, and academics, or ask about your complaints, events, attendance, and profile.
           </p>
         </div>
         <div className="chatbot-hero-status">
@@ -281,8 +483,8 @@ function Chatbot() {
             </div>
             <div>
               <div className="chatbot-header-title-row">
-                <h2>CampusConnect AI</h2>
-                <span className="chatbot-live-badge">24/7 Support</span>
+                <h2>🤖 AI Campus Assistant</h2>
+                <span className="chatbot-live-badge">24/7 AI Support</span>
               </div>
               <p className="chatbot-header-subtitle">
                 <span className="chatbot-status-dot-small" />
@@ -371,7 +573,11 @@ function Chatbot() {
 
                     <div className="chatbot-bubble-wrap">
                       <div className={`chatbot-bubble ${isUser ? 'user-bubble' : 'ai-bubble'}`}>
-                        <p>{msg.text}</p>
+                        {isUser ? (
+                          <p>{msg.text}</p>
+                        ) : (
+                          <FormattedMessage text={msg.text} />
+                        )}
                       </div>
                       <div className="chatbot-message-meta">
                         {msg.time && <span className="chatbot-message-time">{msg.time}</span>}
@@ -408,7 +614,7 @@ function Chatbot() {
                       <span className="chatbot-typing-dot" />
                       <span className="chatbot-typing-dot" />
                       <span className="chatbot-typing-dot" />
-                      <span className="chatbot-typing-text">CampusConnect AI is thinking...</span>
+                      <span className="chatbot-typing-text">🤖 AI Campus Assistant is thinking...</span>
                     </div>
                   </div>
                 </motion.div>
@@ -451,12 +657,12 @@ function Chatbot() {
         >
           <div className="chatbot-input-wrapper">
             <input
-              aria-label="Ask CampusConnect AI a question"
+              aria-label="Ask anything..."
               className="chatbot-input-field"
               disabled={sending}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask CampusConnect AI a question... (Press Enter to send)"
+              placeholder="Ask anything..."
               ref={inputRef}
               type="text"
               value={input}
@@ -513,7 +719,7 @@ function Chatbot() {
                 </div>
                 <div>
                   <p className="chatbot-confirm-title">
-                    Clear your chatbot conversation history?
+                    Clear your conversation history?
                   </p>
                   <p className="chatbot-confirm-desc">
                     This will delete your stored conversation history from the server. This action cannot be undone.

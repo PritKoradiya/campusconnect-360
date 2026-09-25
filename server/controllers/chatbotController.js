@@ -1,101 +1,57 @@
 const ChatbotLog = require('../models/ChatbotLog');
+const { generateAssistantResponse } = require('../services/aiService');
+const { checkAiRateLimit } = require('../utils/aiRateLimiter');
 
-const getChatbotReply = (question) => {
-  const lowerQuestion = question.toLowerCase();
-
-  // Real Gemini API integration can be added later using GEMINI_API_KEY.
-  if (
-    lowerQuestion.includes('track') ||
-    lowerQuestion.includes('tracking') ||
-    lowerQuestion.includes('status') ||
-    lowerQuestion.includes('progress') ||
-    lowerQuestion.includes('update') ||
-    lowerQuestion.includes('complaint status') ||
-    lowerQuestion.includes('my complaint')
-  ) {
-    return {
-      intent: 'complaint_tracking',
-      answer:
-        'You can track your complaint status from the My Complaints page in your Student Dashboard. There you can see whether your complaint is Pending, In Progress, Resolved, or Rejected.'
-    };
-  }
-
-  if (
-    lowerQuestion.includes('complaint') ||
-    lowerQuestion.includes('issue') ||
-    lowerQuestion.includes('problem') ||
-    lowerQuestion.includes('raise complaint') ||
-    lowerQuestion.includes('submit complaint') ||
-    lowerQuestion.includes('report issue')
-  ) {
-    return {
-      intent: 'complaint_help',
-      answer:
-        'You can submit a complaint from the Student Dashboard by opening the Submit Complaint section and filling in the complaint details.'
-    };
-  }
-
-  if (
-    lowerQuestion.includes('notice') ||
-    lowerQuestion.includes('notices') ||
-    lowerQuestion.includes('announcement') ||
-    lowerQuestion.includes('announcements')
-  ) {
-    return {
-      intent: 'notice_help',
-      answer: 'You can view college notices and announcements from the Notices section in your dashboard.'
-    };
-  }
-
-  if (
-    lowerQuestion.includes('event') ||
-    lowerQuestion.includes('events') ||
-    lowerQuestion.includes('workshop') ||
-    lowerQuestion.includes('seminar')
-  ) {
-    return {
-      intent: 'event_help',
-      answer: 'You can check upcoming college events from the Events section in your dashboard.'
-    };
-  }
-
-  if (
-    lowerQuestion.includes('lost') ||
-    lowerQuestion.includes('found') ||
-    lowerQuestion.includes('item') ||
-    lowerQuestion.includes('lost item') ||
-    lowerQuestion.includes('found item')
-  ) {
-    return {
-      intent: 'lost_found_help',
-      answer:
-        'You can report or search lost and found items from the Lost and Found section in your dashboard.'
-    };
-  }
-
-  return {
-    intent: 'general_help',
-    answer:
-      'CampusConnect 360 can help you with complaints, complaint tracking, notices, events, lost and found items, and student support.'
-  };
-};
-
+/**
+ * Handle student AI assistant query.
+ * Accepts general programming/academic questions and authenticated campus queries.
+ */
 const askChatbot = async (req, res) => {
   try {
     const { question } = req.body;
 
-    if (!question) {
+    if (!question || typeof question !== 'string' || !question.trim()) {
       return res.status(400).json({
         success: false,
         message: 'Question is required'
       });
     }
 
-    const { answer, intent } = getChatbotReply(question);
+    const trimmedQuestion = question.trim();
 
+    // 1. Enforce per-user sliding-window rate limit for Gemini API protection
+    const rateCheck = checkAiRateLimit(req.user._id.toString());
+    if (!rateCheck.allowed) {
+      return res.status(429).json({
+        success: false,
+        message: rateCheck.message,
+        retryAfterSeconds: rateCheck.retryAfterSeconds
+      });
+    }
+
+    // 2. Fetch recent conversation history for multi-turn context (last 6 logs)
+    const recentLogs = await ChatbotLog.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .lean();
+
+    // Reverse to chronological order (oldest to newest)
+    const recentHistory = recentLogs.reverse().map((log) => ({
+      question: log.question,
+      answer: log.answer
+    }));
+
+    // 3. Generate response using Gemini / Campus context layer
+    const { answer, intent } = await generateAssistantResponse({
+      question: trimmedQuestion,
+      user: req.user,
+      recentHistory
+    });
+
+    // 4. Save to persistent ChatbotLog
     const chatLog = await ChatbotLog.create({
       user: req.user._id,
-      question,
+      question: trimmedQuestion,
       answer,
       intent
     });
@@ -108,6 +64,7 @@ const askChatbot = async (req, res) => {
       chatLog
     });
   } catch (error) {
+    console.error('Error in askChatbot:', error.message);
     return res.status(500).json({
       success: false,
       message: 'Could not generate chatbot answer',

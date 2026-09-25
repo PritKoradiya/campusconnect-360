@@ -22,6 +22,7 @@ const achievementRoutes = require('./routes/achievementRoutes');
 dotenv.config();
 
 const app = express();
+app.disable('x-powered-by');
 const PORT = process.env.PORT || 5000;
 
 connectDB();

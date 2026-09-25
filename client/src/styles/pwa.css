@@ -1,0 +1,241 @@
+/* PWA Styles for CampusConnect 360 */
+
+/* Offline & Update Banners */
+.pwa-banner-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.pwa-banner {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 650;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  animation: pwaSlideDown 0.3s ease-out;
+}
+
+@keyframes pwaSlideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.pwa-offline-banner {
+  background: rgba(26, 16, 3, 0.92);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fef3c7;
+}
+
+.pwa-offline-icon {
+  color: #fbbf24;
+  flex-shrink: 0;
+}
+
+.pwa-offline-title {
+  font-weight: 800;
+  color: #fde68a;
+  margin-right: 6px;
+}
+
+.pwa-update-banner {
+  background: rgba(8, 28, 48, 0.94);
+  border-bottom: 1px solid rgba(34, 211, 238, 0.4);
+  color: #e0f2fe;
+}
+
+.pwa-update-icon {
+  color: #22d3ee;
+  flex-shrink: 0;
+}
+
+.pwa-refresh-btn {
+  margin-left: 12px;
+  padding: 4px 12px;
+  font-size: 12.5px;
+  font-weight: 750;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 211, 238, 0.6);
+  background: rgba(6, 182, 212, 0.25);
+  color: #67e8f9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pwa-refresh-btn:hover {
+  background: rgba(6, 182, 212, 0.4);
+  border-color: #22d3ee;
+  color: #ffffff;
+}
+
+/* Floating Install Prompt */
+.pwa-install-modal {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 99998;
+  max-width: 360px;
+  width: calc(100vw - 48px);
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(9, 21, 37, 0.96);
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 24px rgba(6, 182, 212, 0.12);
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #f1f5f9;
+}
+
+.pwa-install-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pwa-install-branding {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pwa-install-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  padding: 2px;
+  background: #06111f;
+  object-fit: contain;
+}
+
+.pwa-install-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.pwa-install-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.pwa-install-close {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s ease;
+}
+
+.pwa-install-close:hover {
+  color: #e2e8f0;
+}
+
+.pwa-install-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.pwa-install-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0284c7, #0891b2);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(8, 145, 178, 0.3);
+}
+
+.pwa-install-btn:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 18px rgba(8, 145, 178, 0.4);
+}
+
+.pwa-dismiss-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pwa-dismiss-btn:hover {
+  color: #cbd5e1;
+  background: rgba(51, 65, 85, 0.6);
+}
+
+/* Header Install Action Button */
+.header-install-btn {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 13px;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 999px;
+  background: rgba(8, 145, 178, 0.14);
+  color: #67e8f9;
+  font-size: 13.5px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-install-btn:hover {
+  border-color: rgba(34, 211, 238, 0.6);
+  background: rgba(8, 145, 178, 0.25);
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.15);
+  color: #a5f3fc;
+}
+
+@media (max-width: 640px) {
+  .pwa-install-modal {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}
