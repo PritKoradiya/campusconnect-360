@@ -1,4 +1,4 @@
-const { getGeminiClient, GEMINI_MODEL, MAX_OUTPUT_TOKENS, isGeminiConfigured } = require('../config/aiConfig');
+const { getGeminiClient, GEMINI_MODEL, MAX_OUTPUT_TOKENS, isGeminiConfigured, getGeminiModel } = require('../config/aiConfig');
 const {
   getMyComplaints,
   getMyRegistrations,
@@ -348,9 +348,11 @@ const generateAssistantResponse = async ({ question, user, recentHistory = [] })
     parts: [{ text: promptText }]
   });
 
+  const selectedModel = getGeminiModel ? getGeminiModel() : (GEMINI_MODEL || 'gemini-2.5-flash');
+
   try {
     const response = await aiClient.models.generateContent({
-      model: GEMINI_MODEL,
+      model: selectedModel,
       contents,
       config: {
         systemInstruction,
@@ -366,20 +368,52 @@ const generateAssistantResponse = async ({ question, user, recentHistory = [] })
       intent: intents.length > 0 ? intents.join('_') : 'general_ai'
     };
   } catch (error) {
-    console.error('Gemini API Error:', error.message || error);
+    // 1. Safely extract HTTP status, error category, and provider message
+    let statusCode = error.status || (error.response && error.response.status) || 500;
+    let errorCategory = 'UNKNOWN';
+    let providerMessage = error.message || 'Unknown provider error';
 
-    // Handle 429 quota/rate limit error gracefully
-    if (error.status === 429 || (error.message && error.message.includes('429')) || (error.message && error.message.includes('RESOURCE_EXHAUSTED'))) {
-      return {
-        answer: 'AI usage limit reached. Please try again later.',
-        intent: 'rate_limited'
-      };
+    if (typeof error.message === 'string') {
+      try {
+        const parsed = JSON.parse(error.message);
+        if (parsed.error) {
+          if (parsed.error.code) statusCode = Number(parsed.error.code) || statusCode;
+          if (parsed.error.status) errorCategory = String(parsed.error.status);
+          if (parsed.error.message) providerMessage = String(parsed.error.message);
+        }
+      } catch (_) {}
     }
 
-    // Model not found fallback (e.g. if custom GEMINI_MODEL name is unrecognized)
-    if (error.status === 404 || (error.message && error.message.includes('not found'))) {
+    // Determine error category if UNKNOWN
+    if (errorCategory === 'UNKNOWN') {
+      if (statusCode === 401 || providerMessage.includes('API_KEY_INVALID') || providerMessage.toLowerCase().includes('api key not valid')) {
+        errorCategory = 'UNAUTHENTICATED';
+      } else if (statusCode === 403 || providerMessage.includes('PERMISSION_DENIED')) {
+        errorCategory = 'PERMISSION_DENIED';
+      } else if (statusCode === 404 || providerMessage.includes('NOT_FOUND') || providerMessage.toLowerCase().includes('not found')) {
+        errorCategory = 'NOT_FOUND';
+      } else if (statusCode === 429 || providerMessage.includes('RESOURCE_EXHAUSTED') || providerMessage.toLowerCase().includes('quota')) {
+        errorCategory = 'RESOURCE_EXHAUSTED';
+      } else if (statusCode >= 500 && statusCode < 600) {
+        errorCategory = 'SERVER_ERROR';
+      }
+    }
+
+    // 2. Safe error diagnostics logging
+    // Logs: HTTP/status code, category, provider message, model, whether key is present
+    // NEVER logs: actual API key, JWT, password, MongoDB password, or private user data
+    console.error('Gemini Provider Error Diagnostics:', {
+      statusCode,
+      errorCategory,
+      providerMessage,
+      modelName: selectedModel,
+      isApiKeyPresent: Boolean(isGeminiConfigured())
+    });
+
+    // 3. Fallback for 404 model not found
+    if ((statusCode === 404 || errorCategory === 'NOT_FOUND' || providerMessage.toLowerCase().includes('not found')) && selectedModel !== 'gemini-2.5-flash') {
       try {
-        console.warn(`Model ${GEMINI_MODEL} not found, falling back to gemini-2.5-flash...`);
+        console.warn(`Model ${selectedModel} not found, falling back to gemini-2.5-flash...`);
         const fallbackResponse = await aiClient.models.generateContent({
           model: 'gemini-2.5-flash',
           contents,
@@ -394,11 +428,28 @@ const generateAssistantResponse = async ({ question, user, recentHistory = [] })
           intent: intents.length > 0 ? intents.join('_') : 'general_ai'
         };
       } catch (fallbackError) {
-        console.error('Fallback Model Error:', fallbackError.message);
+        let fallbackStatus = fallbackError.status || 500;
+        let fallbackCategory = 'UNKNOWN';
+        let fallbackMessage = fallbackError.message || '';
+        try {
+          const parsedFb = JSON.parse(fallbackError.message);
+          if (parsedFb.error) {
+            fallbackStatus = Number(parsedFb.error.code) || fallbackStatus;
+            fallbackCategory = parsedFb.error.status || fallbackCategory;
+            fallbackMessage = parsedFb.error.message || fallbackMessage;
+          }
+        } catch (_) {}
+        console.error('Gemini Fallback Error Diagnostics:', {
+          statusCode: fallbackStatus,
+          errorCategory: fallbackCategory,
+          providerMessage: fallbackMessage,
+          modelName: 'gemini-2.5-flash',
+          isApiKeyPresent: Boolean(isGeminiConfigured())
+        });
       }
     }
 
-    // If API call failed but we have campus context, fall back to safe campus response
+    // 4. Safe campus context fallback if campus data is available
     if (isCampusSpecific && campusContext && Object.keys(campusContext).length > 0) {
       return {
         answer: buildLocalCampusResponse(question, campusContext, user),
@@ -406,9 +457,44 @@ const generateAssistantResponse = async ({ question, user, recentHistory = [] })
       };
     }
 
-    // Generic friendly error without exposing raw backend dumps
+    // 5. Clean, classified user-facing message based on error type
+    if (statusCode === 401 || errorCategory === 'UNAUTHENTICATED' || providerMessage.includes('API_KEY_INVALID') || providerMessage.toLowerCase().includes('api key not valid')) {
+      return {
+        answer: 'Gemini API key configuration error. Please check your API key configuration.',
+        intent: 'error'
+      };
+    }
+
+    if (statusCode === 403 || errorCategory === 'PERMISSION_DENIED') {
+      return {
+        answer: 'Gemini API permission error. Please verify your Gemini API key permissions.',
+        intent: 'error'
+      };
+    }
+
+    if (statusCode === 404 || errorCategory === 'NOT_FOUND' || providerMessage.toLowerCase().includes('not found')) {
+      return {
+        answer: 'Gemini model/configuration error. The requested model could not be found or is unsupported.',
+        intent: 'error'
+      };
+    }
+
+    if (statusCode === 429 || errorCategory === 'RESOURCE_EXHAUSTED' || providerMessage.toLowerCase().includes('quota') || providerMessage.includes('429')) {
+      return {
+        answer: 'Gemini quota/rate limit reached. Please try again later.',
+        intent: 'rate_limited'
+      };
+    }
+
+    if (statusCode >= 500 && statusCode < 600) {
+      return {
+        answer: 'Gemini temporarily unavailable. Please try again in a few moments.',
+        intent: 'error'
+      };
+    }
+
     return {
-      answer: 'Sorry, the AI service is momentarily unavailable. Please try again in a few moments.',
+      answer: 'Gemini temporarily unavailable. Please try again in a few moments.',
       intent: 'error'
     };
   }

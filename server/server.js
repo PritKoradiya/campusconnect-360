@@ -1,7 +1,11 @@
+const path = require('path');
+const dotenv = require('dotenv');
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config();
+
 const http = require('http');
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const { initSocket } = require('./socket');
 const modelRoutes = require('./routes/modelRoutes');
@@ -18,8 +22,6 @@ const reportRoutes = require('./routes/reportRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const activityRoutes = require('./routes/activityRoutes');
 const achievementRoutes = require('./routes/achievementRoutes');
-
-dotenv.config();
 
 const app = express();
 app.disable('x-powered-by');
