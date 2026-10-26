@@ -22,6 +22,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import { getDashboardPath, useAuth } from '../../context/AuthContext';
+import ThemeToggle from '../../components/common/ThemeToggle';
 import '../../styles/auth.css';
 
 /* ─── data ─────────────────────────────────────────────── */
@@ -149,6 +150,9 @@ function LoginPage() {
 
   return (
     <div className="cc-auth-root">
+      <div className="cc-auth-top-bar">
+        <ThemeToggle />
+      </div>
       {/* LOGIN layout: info LEFT, form RIGHT */}
       <div className="cc-auth-layout">
 

@@ -5,6 +5,7 @@ import logo from '../../assets/logo.png';
 import { useAuth } from '../../context/AuthContext';
 import { usePwa } from '../../context/PwaContext';
 import NotificationBell from './NotificationBell';
+import ThemeToggle from './ThemeToggle';
 import { disconnectSocket } from '../../services/socket';
 
 function Header() {
@@ -56,6 +57,7 @@ function Header() {
             <span>Install App</span>
           </motion.button>
         )}
+        <ThemeToggle />
         {user && <NotificationBell />}
         <motion.div
           className="header-user"

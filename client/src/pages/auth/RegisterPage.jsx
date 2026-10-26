@@ -26,6 +26,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import { getDashboardPath, useAuth } from '../../context/AuthContext';
 import { getDepartments } from '../../services/departmentService';
+import ThemeToggle from '../../components/common/ThemeToggle';
 import '../../styles/auth.css';
 
 /* ─── data ─────────────────────────────────────────────── */
@@ -178,6 +179,9 @@ function RegisterPage() {
 
   return (
     <div className="cc-auth-root">
+      <div className="cc-auth-top-bar">
+        <ThemeToggle />
+      </div>
       {/*
         REGISTER layout: cc-register-mode → CSS grid-template-areas swaps
         form to LEFT grid-area, info to RIGHT grid-area

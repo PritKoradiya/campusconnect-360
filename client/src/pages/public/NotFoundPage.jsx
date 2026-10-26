@@ -3,13 +3,17 @@ import { ArrowLeft, Compass, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import { getDashboardPath, useAuth } from '../../context/AuthContext';
+import ThemeToggle from '../../components/common/ThemeToggle';
 
 function NotFoundPage() {
   const { user } = useAuth();
   const targetDashboard = user?.role ? getDashboardPath(user.role) : '/login';
 
   return (
-    <main className="campus-auth-page" style={{ justifyContent: 'center', padding: '32px 20px' }}>
+    <main className="campus-auth-page" style={{ justifyContent: 'center', padding: '32px 20px', position: 'relative' }}>
+      <div className="standalone-theme-toggle">
+        <ThemeToggle />
+      </div>
       <motion.section
         animate={{ opacity: 1, y: 0, scale: 1 }}
         className="campus-auth-card"

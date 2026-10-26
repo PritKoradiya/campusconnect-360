@@ -1,8 +1,12 @@
 import { Link } from 'react-router-dom';
+import ThemeToggle from '../../components/common/ThemeToggle';
 
 function LandingPage() {
   return (
-    <main className="public-page">
+    <main className="public-page" style={{ position: 'relative' }}>
+      <div className="standalone-theme-toggle">
+        <ThemeToggle />
+      </div>
       <section className="public-panel">
         <h1>CampusConnect 360</h1>
         <p>Smart campus utility and student support platform for complaints, notices, events, lost and found, and helpdesk support.</p>
