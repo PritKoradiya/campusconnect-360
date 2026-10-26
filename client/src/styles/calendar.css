@@ -41,29 +41,29 @@
 }
 
 .cal-btn-primary {
-  background: linear-gradient(135deg, #0284c7, #06b6d4);
+  background: linear-gradient(135deg, #0d9488, #14b8a6);
   color: #ffffff;
-  border: 1px solid rgba(34, 211, 238, 0.4);
-  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.25);
+  border: 1px solid rgba(20, 184, 166, 0.4);
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.25);
 }
 
 .cal-btn-primary:hover {
-  background: linear-gradient(135deg, #0369a1, #0891b2);
-  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+  background: linear-gradient(135deg, #0f766e, #0d9488);
+  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.35);
   transform: translateY(-1px);
 }
 
 .cal-btn-secondary {
-  background: rgba(15, 30, 51, 0.85);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  color: #e0f2fe;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
 }
 
 .cal-btn-secondary:hover:not(:disabled) {
-  background: rgba(19, 39, 68, 0.95);
-  border-color: rgba(34, 211, 238, 0.45);
-  color: #38bdf8;
-  box-shadow: 0 0 14px rgba(34, 211, 238, 0.15);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(20, 184, 166, 0.4);
+  color: #5eead4;
+  box-shadow: 0 0 14px rgba(20, 184, 166, 0.15);
 }
 
 .cal-btn-secondary:disabled {

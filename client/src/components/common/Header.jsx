@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Download, LogOut, UserRound } from 'lucide-react';
+import { Download, LogOut, Menu, UserRound, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import { useAuth } from '../../context/AuthContext';
@@ -8,7 +8,7 @@ import NotificationBell from './NotificationBell';
 import ThemeToggle from './ThemeToggle';
 import { disconnectSocket } from '../../services/socket';
 
-function Header() {
+function Header({ isMobileMenuOpen = false, onToggleMobileMenu }) {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const { canInstall, installApp } = usePwa();
@@ -28,20 +28,33 @@ function Header() {
       initial={{ opacity: 0, y: -12 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
     >
-      <motion.div
-        animate={{ opacity: 1, x: 0 }}
-        className="header-brand"
-        initial={{ opacity: 0, x: -12 }}
-        transition={{ duration: 0.45, delay: 0.08, ease: 'easeOut' }}
-      >
-        <span className="brand-mark">
-          <img src={logo} alt="CampusConnect 360 logo" />
-        </span>
-        <div>
-          <h1 className="brand-title">CampusConnect 360</h1>
-          <p className="brand-subtitle">Smart Campus Utility & Student Support Platform</p>
-        </div>
-      </motion.div>
+      <div className="header-left">
+        {onToggleMobileMenu && (
+          <button
+            type="button"
+            className="mobile-menu-btn"
+            onClick={onToggleMobileMenu}
+            aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={isMobileMenuOpen}
+          >
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        )}
+        <motion.div
+          animate={{ opacity: 1, x: 0 }}
+          className="header-brand"
+          initial={{ opacity: 0, x: -12 }}
+          transition={{ duration: 0.45, delay: 0.08, ease: 'easeOut' }}
+        >
+          <span className="brand-mark">
+            <img src={logo} alt="CampusConnect 360 logo" />
+          </span>
+          <div className="brand-text">
+            <h1 className="brand-title">CampusConnect 360</h1>
+            <p className="brand-subtitle">Smart Campus Utility & Student Support Platform</p>
+          </div>
+        </motion.div>
+      </div>
       <div className="header-actions">
         {canInstall && (
           <motion.button

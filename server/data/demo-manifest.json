@@ -1,0 +1,206 @@
+{
+  "generatedAt": "2026-10-26T18:11:53.294Z",
+  "database": "mongodb://127.0.0.1:27017/campusconnect360",
+  "summary": {
+    "demoUsersAddedOrReused": 4,
+    "complaints": 6,
+    "feedbacks": 1,
+    "notices": 3,
+    "events": 3,
+    "registrations": 4,
+    "attendances": 1,
+    "lostFoundItems": 4,
+    "notifications": 7
+  },
+  "users": [
+    {
+      "id": "6adf97e4a15e3e006727f9e4",
+      "email": "it.dept@example.com",
+      "role": "department",
+      "name": "Prof. Vikram Joshi"
+    },
+    {
+      "id": "6adf97e4a15e3e006727f9e7",
+      "email": "aarav.sharma@example.com",
+      "role": "student",
+      "name": "Aarav Sharma"
+    },
+    {
+      "id": "6adf97e4a15e3e006727f9ea",
+      "email": "diya.patel@example.com",
+      "role": "student",
+      "name": "Diya Patel"
+    },
+    {
+      "id": "6adf97e4a15e3e006727f9ed",
+      "email": "rohan.verma@example.com",
+      "role": "student",
+      "name": "Rohan Verma"
+    }
+  ],
+  "complaints": [
+    {
+      "id": "6adf97e4a15e3e006727f9f0",
+      "title": "Broken Bench and Projector Socket in Seminar Hall B",
+      "status": "Pending"
+    },
+    {
+      "id": "6adf97e4a15e3e006727f9f4",
+      "title": "Wi-Fi Signal Drops Frequently in IT Block 3rd Floor Labs",
+      "status": "In Progress"
+    },
+    {
+      "id": "6adf97e4a15e3e006727f9fb",
+      "title": "Lab 3 High-Performance Workstation OS Kernel Panic",
+      "status": "In Progress"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa01",
+      "title": "Water Dispenser Sensor Fault in Engineering Block B",
+      "status": "Resolved"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa09",
+      "title": "Air Conditioning Tripping Circuit Breaker in Computer Lab 1",
+      "status": "Resolved"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa10",
+      "title": "Request to Reschedule End-Term Practical Exam Slot",
+      "status": "Rejected"
+    }
+  ],
+  "feedbacks": [
+    {
+      "id": "6adf97e4a15e3e006727fa15",
+      "complaintId": "6adf97e4a15e3e006727fa01",
+      "rating": 5
+    }
+  ],
+  "notices": [
+    {
+      "id": "6adf97e4a15e3e006727fa1e",
+      "title": "Campus Central Library Extended Study Hours for Mid-Term Exams",
+      "priority": "Important"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa21",
+      "title": "Annual Inter-College Cultural Fest 2026: Auditions Announced",
+      "priority": "Normal"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa24",
+      "title": "Scheduled Campus Network Infrastructure Maintenance",
+      "priority": "Urgent"
+    }
+  ],
+  "events": [
+    {
+      "id": "6adf97e4a15e3e006727fa27",
+      "title": "Campus Tech Orientation & Git Workshop",
+      "date": "2026-10-22T10:00:00.000Z"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa2a",
+      "title": "CampusConnect Hackathon 2026: Code Innovations",
+      "date": "2026-10-28T09:00:00.000Z"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa2d",
+      "title": "AI & Robotics Symposium: The Future of Automation",
+      "date": "2026-11-04T14:00:00.000Z"
+    }
+  ],
+  "registrations": [
+    {
+      "id": "6adf97e4a15e3e006727fa30",
+      "event": "Workshop",
+      "student": "Aarav"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa33",
+      "event": "Workshop",
+      "student": "Diya"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa39",
+      "event": "Hackathon",
+      "student": "Diya"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa3c",
+      "event": "Robotics",
+      "student": "Rohan"
+    }
+  ],
+  "attendances": [
+    {
+      "id": "6adf97e4a15e3e006727fa36",
+      "student": "Aarav",
+      "event": "Workshop"
+    }
+  ],
+  "lostFound": [
+    {
+      "id": "6adf97e4a15e3e006727fa42",
+      "type": "Lost",
+      "name": "Calculus: Early Transcendentals (Stewart 8th Edition)",
+      "status": "Open"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa45",
+      "type": "Found",
+      "name": "Stewart Calculus 8th Edition Textbook",
+      "status": "Open"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa48",
+      "type": "Lost",
+      "name": "Boat Rockerz 450 Bluetooth Headphones",
+      "status": "Open"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa4b",
+      "type": "Found",
+      "name": "Brown Leather Wallet with Metro Smart Card",
+      "status": "Claimed"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "6adf97e4a15e3e006727fa4e",
+      "recipient": "6aae5befd83421362f02dfd7",
+      "title": "New Complaint Submitted"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa51",
+      "recipient": "6adf97e4a15e3e006727f9e4",
+      "title": "New Complaint Assigned"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa54",
+      "recipient": "6adf97e4a15e3e006727f9ea",
+      "title": "Complaint Update"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa57",
+      "recipient": "6adf97e4a15e3e006727f9ea",
+      "title": "Event Registration Confirmed"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa5a",
+      "recipient": "6adf97e4a15e3e006727f9e7",
+      "title": "Attendance Confirmed"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa5d",
+      "recipient": "6adf97e4a15e3e006727f9e7",
+      "title": "Complaint Resolved"
+    },
+    {
+      "id": "6adf97e4a15e3e006727fa60",
+      "recipient": "6adf97e4a15e3e006727f9ed",
+      "title": "Complaint Resolved"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Activity,
   ArrowRight,
@@ -23,10 +23,10 @@ import { getStudentDashboard } from '../../services/dashboardService';
 import { getStudentActivityFeed } from '../../services/activityService';
 
 const quickActions = [
-  { label: 'Raise Complaint', description: 'Create a new campus service request.', icon: FilePlus },
-  { label: 'Track Complaint', description: 'Check status and department remarks.', icon: Search },
-  { label: 'View Notices', description: 'Read latest campus announcements.', icon: Bell },
-  { label: 'Ask AI Chatbot', description: 'Get quick help for common questions.', icon: Bot }
+  { label: 'Raise Complaint', description: 'Create a new campus service request.', icon: FilePlus, path: '/student/submit-complaint', tone: 'teal' },
+  { label: 'Track Complaint', description: 'Check status and department remarks.', icon: Search, path: '/student/my-complaints', tone: 'sky' },
+  { label: 'View Notices', description: 'Read latest campus announcements.', icon: Bell, path: '/student/notices', tone: 'peach' },
+  { label: 'Ask AI Chatbot', description: 'Get quick help for common questions.', icon: Bot, path: '/student/chatbot', tone: 'lavender' }
 ];
 
 const getItemText = (item, fallback = 'Untitled') => {
@@ -63,6 +63,7 @@ const getCountValue = (value) => {
 
 function StudentDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState({});
   const [recentActivities, setRecentActivities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -111,22 +112,22 @@ function StudentDashboard() {
   const upcomingEvents = Array.isArray(dashboardData.upcomingEvents) ? dashboardData.upcomingEvents : [];
 
   const summaryCards = [
-    { label: 'Total Complaints', value: getCountValue(dashboardData.totalComplaints), icon: ClipboardList, tone: 'blue' },
-    { label: 'Pending', value: getCountValue(dashboardData.pendingComplaints), icon: Clock3, tone: 'warning' },
-    { label: 'In Progress', value: getCountValue(dashboardData.inProgressComplaints), icon: Timer, tone: 'cyan' },
-    { label: 'Resolved', value: getCountValue(dashboardData.resolvedComplaints), icon: CheckCircle2, tone: 'success' }
+    { label: 'Total Complaints', value: getCountValue(dashboardData.totalComplaints), icon: ClipboardList, tone: 'blue', path: '/student/my-complaints' },
+    { label: 'Pending', value: getCountValue(dashboardData.pendingComplaints), icon: Clock3, tone: 'warning', path: '/student/my-complaints' },
+    { label: 'In Progress', value: getCountValue(dashboardData.inProgressComplaints), icon: Timer, tone: 'cyan', path: '/student/my-complaints' },
+    { label: 'Resolved', value: getCountValue(dashboardData.resolvedComplaints), icon: CheckCircle2, tone: 'success', path: '/student/my-complaints' }
   ];
 
   if (dashboardData.rejectedComplaints !== undefined) {
-    summaryCards.push({ label: 'Rejected Complaints', value: getCountValue(dashboardData.rejectedComplaints), icon: XCircle, tone: 'danger' });
+    summaryCards.push({ label: 'Rejected Complaints', value: getCountValue(dashboardData.rejectedComplaints), icon: XCircle, tone: 'danger', path: '/student/my-complaints' });
   }
 
   if (dashboardData.myLostFoundItems !== undefined) {
-    summaryCards.push({ label: 'Lost & Found Items', value: getCountValue(dashboardData.myLostFoundItems), icon: PackageSearch, tone: 'cyan' });
+    summaryCards.push({ label: 'Lost & Found Items', value: getCountValue(dashboardData.myLostFoundItems), icon: PackageSearch, tone: 'cyan', path: '/student/lost-found' });
   }
 
   if (dashboardData.chatbotQuestions !== undefined) {
-    summaryCards.push({ label: 'Chatbot Questions', value: getCountValue(dashboardData.chatbotQuestions), icon: Bot, tone: 'blue' });
+    summaryCards.push({ label: 'Chatbot Questions', value: getCountValue(dashboardData.chatbotQuestions), icon: Bot, tone: 'blue', path: '/student/chatbot' });
   }
 
   return (
@@ -160,7 +161,13 @@ function StudentDashboard() {
           const Icon = card.icon;
 
           return (
-            <AnimatedCard className={`dashboard-stat-card tone-${card.tone}`} delay={0.1 + index * 0.08} key={card.label}>
+            <AnimatedCard
+              className={`dashboard-stat-card tone-${card.tone}`}
+              delay={0.1 + index * 0.08}
+              key={card.label}
+              onClick={card.path ? () => navigate(card.path) : undefined}
+              style={card.path ? { cursor: 'pointer' } : undefined}
+            >
               <span className="dashboard-card-icon">
                 <Icon size={22} />
               </span>
@@ -183,13 +190,18 @@ function StudentDashboard() {
             const Icon = action.icon;
 
             return (
-              <AnimatedCard className="dashboard-action-card" delay={0.2 + index * 0.08} key={action.label}>
-                <span className="dashboard-card-icon">
-                  <Icon size={22} />
-                </span>
-                <h3>{action.label}</h3>
-                <p>{action.description}</p>
-              </AnimatedCard>
+              <Link to={action.path} key={action.label} className="dashboard-action-link" style={{ textDecoration: 'none' }}>
+                <AnimatedCard className={`dashboard-action-card tone-${action.tone}`} delay={0.15 + index * 0.06}>
+                  <span className="dashboard-card-icon">
+                    <Icon size={22} />
+                  </span>
+                  <div className="dashboard-action-body">
+                    <h3>{action.label}</h3>
+                    <p>{action.description}</p>
+                  </div>
+                  <ArrowRight size={16} className="dashboard-action-arrow" />
+                </AnimatedCard>
+              </Link>
             );
           })}
         </div>

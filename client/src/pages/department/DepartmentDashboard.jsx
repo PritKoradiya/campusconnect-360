@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, ClipboardList, Clock3, Timer, XCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AnimatedCard from '../../components/ui/AnimatedCard';
@@ -37,6 +38,7 @@ const getCreatedDate = (complaint) => {
 
 function DepartmentDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -78,12 +80,12 @@ function DepartmentDashboard() {
   const departmentMessage = dashboardData.message === 'Department is not assigned to this user yet.' ? dashboardData.message : '';
 
   const summaryCards = [
-    { label: 'Assigned Complaints', value: getCountValue(dashboardData.assignedComplaints), icon: ClipboardList, tone: 'blue' },
-    { label: 'Pending Complaints', value: getCountValue(dashboardData.pendingComplaints), icon: Clock3, tone: 'warning' },
-    { label: 'In Progress', value: getCountValue(dashboardData.inProgressComplaints), icon: Timer, tone: 'cyan' },
-    { label: 'Resolved', value: getCountValue(dashboardData.resolvedComplaints), icon: CheckCircle2, tone: 'success' },
-    { label: 'Rejected', value: getCountValue(dashboardData.rejectedComplaints), icon: XCircle, tone: 'danger' },
-    { label: 'Urgent Complaints', value: getCountValue(dashboardData.urgentComplaints), icon: AlertTriangle, tone: 'danger' }
+    { label: 'Assigned Complaints', value: getCountValue(dashboardData.assignedComplaints), icon: ClipboardList, tone: 'blue', path: '/department/complaints' },
+    { label: 'Pending Complaints', value: getCountValue(dashboardData.pendingComplaints), icon: Clock3, tone: 'warning', path: '/department/complaints' },
+    { label: 'In Progress', value: getCountValue(dashboardData.inProgressComplaints), icon: Timer, tone: 'cyan', path: '/department/status' },
+    { label: 'Resolved', value: getCountValue(dashboardData.resolvedComplaints), icon: CheckCircle2, tone: 'success', path: '/department/complaints' },
+    { label: 'Rejected', value: getCountValue(dashboardData.rejectedComplaints), icon: XCircle, tone: 'danger', path: '/department/complaints' },
+    { label: 'Urgent Complaints', value: getCountValue(dashboardData.urgentComplaints), icon: AlertTriangle, tone: 'danger', path: '/department/complaints' }
   ];
 
   return (
@@ -126,7 +128,13 @@ function DepartmentDashboard() {
           const Icon = card.icon;
 
           return (
-            <AnimatedCard className={`dashboard-stat-card tone-${card.tone}`} delay={0.1 + index * 0.08} key={card.label}>
+            <AnimatedCard
+              className={`dashboard-stat-card tone-${card.tone}`}
+              delay={0.1 + index * 0.08}
+              key={card.label}
+              onClick={card.path ? () => navigate(card.path) : undefined}
+              style={card.path ? { cursor: 'pointer' } : undefined}
+            >
               <span className="dashboard-card-icon">
                 <Icon size={22} />
               </span>

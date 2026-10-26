@@ -74,20 +74,20 @@ function AdminDashboard() {
   const recentUsers = Array.isArray(dashboardData.recentUsers) ? dashboardData.recentUsers : [];
 
   const summaryCards = [
-    { label: 'Total Users', value: getCountValue(dashboardData.totalUsers), icon: Users, tone: 'blue' },
-    { label: 'Total Complaints', value: getCountValue(dashboardData.totalComplaints), icon: ClipboardList, tone: 'cyan' },
-    { label: 'Pending Complaints', value: getCountValue(dashboardData.pendingComplaints), icon: Clock3, tone: 'warning' },
-    { label: 'Resolved Complaints', value: getCountValue(dashboardData.resolvedComplaints), icon: CheckCircle2, tone: 'success' },
-    { label: 'Notices', value: getCountValue(dashboardData.activeNotices ?? dashboardData.totalNotices), icon: Bell, tone: 'blue' },
-    { label: 'Events', value: getCountValue(dashboardData.activeEvents ?? dashboardData.totalEvents), icon: CalendarDays, tone: 'cyan' }
+    { label: 'Total Users', value: getCountValue(dashboardData.totalUsers), icon: Users, tone: 'blue', path: '/admin/users' },
+    { label: 'Total Complaints', value: getCountValue(dashboardData.totalComplaints), icon: ClipboardList, tone: 'cyan', path: '/admin/complaints' },
+    { label: 'Pending Complaints', value: getCountValue(dashboardData.pendingComplaints), icon: Clock3, tone: 'warning', path: '/admin/complaints' },
+    { label: 'Resolved Complaints', value: getCountValue(dashboardData.resolvedComplaints), icon: CheckCircle2, tone: 'success', path: '/admin/complaints' },
+    { label: 'Notices', value: getCountValue(dashboardData.activeNotices ?? dashboardData.totalNotices), icon: Bell, tone: 'blue', path: '/admin/notices' },
+    { label: 'Events', value: getCountValue(dashboardData.activeEvents ?? dashboardData.totalEvents), icon: CalendarDays, tone: 'cyan', path: '/admin/events' }
   ];
 
   if (dashboardData.totalStudents !== undefined) {
-    summaryCards.push({ label: 'Total Students', value: getCountValue(dashboardData.totalStudents), icon: Users, tone: 'blue' });
+    summaryCards.push({ label: 'Total Students', value: getCountValue(dashboardData.totalStudents), icon: Users, tone: 'blue', path: '/admin/users' });
   }
 
   if (dashboardData.totalDepartmentUsers !== undefined) {
-    summaryCards.push({ label: 'Department Users', value: getCountValue(dashboardData.totalDepartmentUsers), icon: UserCog, tone: 'cyan' });
+    summaryCards.push({ label: 'Department Users', value: getCountValue(dashboardData.totalDepartmentUsers), icon: UserCog, tone: 'cyan', path: '/admin/users' });
   }
 
   if (dashboardData.openLostFoundItems !== undefined) {
@@ -101,7 +101,7 @@ function AdminDashboard() {
   }
 
   if (dashboardData.totalChatbotQuestions !== undefined) {
-    summaryCards.push({ label: 'Chatbot Questions', value: getCountValue(dashboardData.totalChatbotQuestions), icon: Bot, tone: 'blue' });
+    summaryCards.push({ label: 'Chatbot Questions', value: getCountValue(dashboardData.totalChatbotQuestions), icon: Bot, tone: 'blue', path: '/admin/analytics' });
   }
 
   return (

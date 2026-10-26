@@ -39,7 +39,7 @@ const applyThemeToDOM = (theme) => {
   // Update mobile browser chrome/status bar color
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
   if (metaThemeColor) {
-    metaThemeColor.setAttribute('content', theme === 'dark' ? '#06111f' : '#ffffff');
+    metaThemeColor.setAttribute('content', theme === 'dark' ? '#0f141c' : '#ffffff');
   }
 };
 
